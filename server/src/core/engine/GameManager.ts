@@ -322,7 +322,12 @@ class GameManager {
 
       for (const bot of bots) {
         if (state.phase === 'day_vote') {
-          const targets = state.players.filter(p => p.isAlive && p.id !== bot.id);
+          // Wolves vote for non-wolves; others vote randomly
+          let targets = state.players.filter(p => p.isAlive && p.id !== bot.id);
+          if (bot.faction === 'wolves') {
+            const nonWolves = targets.filter(p => p.faction !== 'wolves');
+            if (nonWolves.length > 0) targets = nonWolves;
+          }
           if (targets.length > 0) {
             const target = targets[Math.floor(Math.random() * targets.length)];
             await this.submitVote(gameId, bot.id, target.id).catch(() => {});
@@ -340,7 +345,25 @@ class GameManager {
             let targetId: string | null = null;
             if (action.targetType === 'player') {
               let targets = state.players.filter(p => p.isAlive && p.id !== bot.id);
-              if (targets.length > 0) {
+              // Wolves target non-wolves
+              if (action.id === 'wolf_kill') {
+                const nonWolves = targets.filter(p => p.faction !== 'wolves');
+                if (nonWolves.length > 0) targets = nonWolves;
+              }
+              // Healer avoids self and last target
+              if (action.id === 'healer_protect') {
+                const lastHealedId = bot.privateInfo?.lastHealedId as string | undefined;
+                targets = targets.filter(p => p.id !== bot.id && p.id !== lastHealedId);
+              }
+              // Witch save — only if there's a victim (handled in processNightEnd)
+              if (action.id === 'witch_save') {
+                // Bot witch randomly decides to save (70% chance)
+                if (Math.random() < 0.7 && targets.length > 0) {
+                  targetId = targets[0].id; // doesn't matter, processNightEnd will handle
+                } else {
+                  continue;
+                }
+              } else if (targets.length > 0) {
                 targetId = targets[Math.floor(Math.random() * targets.length)].id;
               }
             }

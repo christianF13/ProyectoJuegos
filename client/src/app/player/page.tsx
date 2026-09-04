@@ -58,6 +58,7 @@ export default function PlayerPage() {
   const [joinError, setJoinError] = useState<string | undefined>();
   const [isJoining, setIsJoining] = useState(false);
   const [winnerInfo, setWinnerInfo] = useState<string | null>(null);
+  const [playerReveal, setPlayerReveal] = useState<Array<{id:string;name:string;roleId:string;faction:string;isAlive:boolean}>>([]);
   const [aliveTargets, setAliveTargets] = useState<Target[]>([]);
   const [actionConfirmed, setActionConfirmed] = useState(false);
   const [voteConfirmed, setVoteConfirmed] = useState(false);
@@ -204,8 +205,9 @@ export default function PlayerPage() {
       }),
 
       // Game ended
-      on('game:ended', ({ winnerFaction, description }: { winnerFaction: string; description: string }) => {
-        setWinnerInfo(description);
+      on('game:ended', (data: { winnerFaction: string; description: string; playerReveal?: any[] }) => {
+        setWinnerInfo(data.description);
+        if (data.playerReveal) setPlayerReveal(data.playerReveal);
         setScreen('game_ended');
       }),
 
@@ -347,24 +349,59 @@ export default function PlayerPage() {
         </div>
       );
 
-    case 'game_ended':
+    case 'game_ended': {
+      const ROLE_ICONS: Record<string,string> = {
+        werewolf:'🐺', villager:'🧑‍🌾', seer:'🔮', witch:'🧙‍♀️', healer:'💊', caperucita:'🧺'
+      };
+      const ROLE_NAMES: Record<string,string> = {
+        werewolf:'Hombre Lobo', villager:'Aldeano', seer:'Vidente', witch:'Bruja', healer:'Curandero', caperucita:'Caperucita Roja'
+      };
       return (
-        <div className="min-h-screen bg-night flex flex-col items-center justify-center px-6 text-center">
-          <div className="text-8xl mb-6">🏆</div>
-          <h2 className="text-4xl font-black text-village-gold mb-4 animate-glow">
-            ¡Fin de Partida!
-          </h2>
+        <div className="min-h-screen bg-night flex flex-col items-center px-4 py-8 overflow-y-auto">
+          <div className="text-7xl mb-3">🏆</div>
+          <h2 className="text-3xl font-black text-village-gold mb-2">¡Fin de Partida!</h2>
           {winnerInfo && (
-            <p className="text-xl text-white mb-6 leading-relaxed">{winnerInfo}</p>
+            <p className="text-base text-white mb-5 text-center max-w-sm leading-relaxed">{winnerInfo}</p>
           )}
+
+          {playerReveal.length > 0 && (
+            <div className="w-full max-w-sm mb-6">
+              <p className="text-xs text-gray-500 tracking-widest uppercase mb-3 text-center">Roles de todos los jugadores</p>
+              <div className="space-y-2">
+                {playerReveal.map(p => (
+                  <div
+                    key={p.id}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${
+                      p.faction === 'wolves'
+                        ? 'bg-red-950/40 border-red-900/60'
+                        : 'bg-night-card border-night-border'
+                    } ${!p.isAlive ? 'opacity-50' : ''}`}
+                  >
+                    <span className="text-2xl">{ROLE_ICONS[p.roleId] ?? '❓'}</span>
+                    <div className="flex-1 text-left">
+                      <p className="text-sm font-bold text-white">{p.name}</p>
+                      <p className={`text-xs ${p.faction === 'wolves' ? 'text-red-400' : 'text-gray-400'}`}>
+                        {ROLE_NAMES[p.roleId] ?? p.roleId}
+                      </p>
+                    </div>
+                    <span className={`text-xs font-bold ${p.isAlive ? 'text-green-400' : 'text-gray-600'}`}>
+                      {p.isAlive ? '✅ Vivo' : '💀 Eliminado'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <button
             onClick={() => window.location.reload()}
             className="px-8 py-4 bg-village-gold text-black font-black text-lg rounded-2xl hover:bg-yellow-400 transition-all"
           >
-            Jugar de Nuevo
+            🎮 Jugar de Nuevo
           </button>
         </div>
       );
+    }
 
     default:
       return null;

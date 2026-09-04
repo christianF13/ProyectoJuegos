@@ -77,16 +77,22 @@ function processPhaseEnd(state: GameState, phase: string): PhaseResult {
 function processNightEnd(state: GameState): PhaseResult {
   const eliminations: string[] = [];
   const announcements: string[] = [];
-  // Actions are recorded with their micro-phase, e.g. night_werewolves
   const nightActions = state.pendingActions.filter(a => a.phase.startsWith('night_'));
 
   const wolfKill = nightActions.find(a => a.actionId === 'wolf_kill');
   let victimId: string | null = wolfKill?.targetId ?? null;
+  const victimName = victimId ? (state.players.find(p => p.id === victimId)?.name ?? 'Alguien') : null;
 
-  // Healer protect
+  // Healer protect — record lastHealedId to prevent repeating same target
   const healerProtect = nightActions.find(a => a.actionId === 'healer_protect');
-  if (healerProtect?.targetId === victimId && victimId) {
-    victimId = null; // Saved!
+  if (healerProtect?.targetId) {
+    const healer = state.players.find(p => p.roleId === 'healer' && p.isAlive);
+    if (healer) {
+      healer.privateInfo = { ...healer.privateInfo, lastHealedId: healerProtect.targetId };
+    }
+    if (healerProtect.targetId === victimId && victimId) {
+      victimId = null; // Saved by healer!
+    }
   }
 
   // Seer result — private info only
@@ -102,36 +108,52 @@ function processNightEnd(state: GameState): PhaseResult {
     }
   }
 
-  // Witch save
+  // Witch save — can only be used if victim still alive (healer didn't save them)
   const witchSave = nightActions.find(a => a.actionId === 'witch_save');
+  let witchSaved = false;
   if (witchSave && victimId) {
     const witch = state.players.find(p => p.roleId === 'witch' && p.isAlive);
     if (witch) {
       witch.privateInfo = { ...witch.privateInfo, lifePotion: 'used' };
+      witchSaved = true;
       victimId = null; // saved!
-      announcements.push('La Bruja ha intervenido esta noche...');
     }
   }
 
   // Witch kill
   const witchKill = nightActions.find(a => a.actionId === 'witch_kill');
+  let witchVictimId: string | null = null;
   if (witchKill?.targetId) {
     const witch = state.players.find(p => p.roleId === 'witch' && p.isAlive);
     if (witch) {
       witch.privateInfo = { ...witch.privateInfo, deathPotion: 'used' };
-      eliminations.push(witchKill.targetId);
+      witchVictimId = witchKill.targetId;
+      eliminations.push(witchVictimId);
     }
   }
 
   if (victimId) eliminations.push(victimId);
 
-  if (eliminations.length === 0) {
+  // ── Narration ──────────────────────────────────────────────────────
+  if (eliminations.length === 0 && !witchSaved) {
     announcements.push('Esta noche no murió nadie. El pueblo puede respirar aliviado... por ahora.');
   } else {
-    const names = eliminations
-      .map(id => state.players.find(p => p.id === id)?.name ?? 'Alguien')
-      .join(', ');
-    announcements.push(`Esta noche fue eliminado: ${names}.`);
+    // Wolf kill + witch save
+    if (witchSaved && victimName) {
+      announcements.push(`Los Hombres Lobo atacaron a ${victimName} esta noche... ¡pero la Bruja usó su poción de vida y lo salvó!`);
+    }
+    // Wolf kill result (if not saved)
+    if (victimId) {
+      const victim = state.players.find(p => p.id === victimId);
+      const roleName = allRoles.find(r => r.id === victim?.roleId)?.name ?? 'Desconocido';
+      announcements.push(`Esta noche, los Hombres Lobo eliminaron a ${victim?.name ?? 'alguien'}. Era ${roleName}.`);
+    }
+    // Witch kill announcement
+    if (witchVictimId) {
+      const witchVictim = state.players.find(p => p.id === witchVictimId);
+      const roleName = allRoles.find(r => r.id === witchVictim?.roleId)?.name ?? 'Desconocido';
+      announcements.push(`La Bruja usó su poción de muerte... ${witchVictim?.name ?? 'alguien'} no despertará esta mañana. Era ${roleName}.`);
+    }
   }
 
   return { eliminations, announcements, nextPhase: 'day_discussion' };

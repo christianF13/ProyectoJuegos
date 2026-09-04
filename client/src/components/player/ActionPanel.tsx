@@ -99,6 +99,12 @@ export default function ActionPanel({ actions, targets, onAction, onTargetSelect
           <p className="text-xs text-gray-500 tracking-widest uppercase mb-3">
             {actionDef?.label ?? 'Elige un jugador'}
           </p>
+          {/* Healer notice: server already excludes last healed from targets */}
+          {selectedAction === 'healer_protect' && (privateInfo?.lastHealedId as string) && (
+            <p className="text-xs text-amber-500 mb-3 text-center">
+              ⚠️ No puedes curar a la misma persona que protegiste la ronda pasada.
+            </p>
+          )}
           <div className="space-y-3">
             {targets.map(target => {
               // Buscar qué lobos están apuntando a este target

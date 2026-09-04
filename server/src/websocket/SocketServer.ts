@@ -113,9 +113,12 @@ export function initializeSocketServer(httpServer: HTTPServer): SocketIOServer {
     socket.on('gm:add_bots', async ({ gameId }: { gameId: string }) => {
       try {
         const state = gameManager.getState(gameId);
-        const needed = 8 - state.players.length; // Rellenar hasta 8 jugadores
+        // Need at least 7 to get 1 wolf + seer + witch + healer + 3 villagers
+        const target = Math.max(8, state.players.length);
+        const needed = target - state.players.length;
         for (let i = 0; i < needed; i++) {
-          await gameManager.addPlayer(gameId, `Bot ${i + 1}`);
+          const botNum = state.players.filter(p => p.name.startsWith('Bot')).length + 1;
+          await gameManager.addPlayer(gameId, `Bot ${botNum}`);
         }
         const updatedState = gameManager.getState(gameId);
         io.to(`game:${gameId}`).emit('game:updated', PrivacyGuard.getPublicState(updatedState));
@@ -279,10 +282,16 @@ function setupGlobalEventBroadcasting(io: SocketIOServer): void {
       );
 
       if (availableActions.length > 0) {
-        // Healer cannot heal themselves — exclude self from healer targets
         const isHealer = player.roleId === 'healer';
+        const lastHealedId = player.privateInfo?.lastHealedId as string | undefined;
+
         const targets = state.players
-          .filter(p => p.isAlive && (isHealer ? p.id !== player.id : true))
+          .filter(p => {
+            if (!p.isAlive) return false;
+            if (isHealer && p.id === player.id) return false; // healer can't self-heal
+            if (isHealer && lastHealedId && p.id === lastHealedId) return false; // healer can't repeat
+            return true;
+          })
           .map(p => ({ id: p.id, name: p.name }));
 
         io.to(`player:${player.id}`).emit('player:actions_available', {
@@ -357,7 +366,15 @@ function setupGlobalEventBroadcasting(io: SocketIOServer): void {
   // Game ended
   eventBus.on(GameEventType.GAME_ENDED, async (event) => {
     const state = gameManager.getState(event.gameId);
-    io.to(`game:${event.gameId}`).emit('game:ended', event.data);
+    // Include full player reveal (names + roles) so clients can show final screen
+    const playerReveal = state.players.map(p => ({
+      id: p.id,
+      name: p.name,
+      roleId: p.roleId,
+      faction: p.faction,
+      isAlive: p.isAlive,
+    }));
+    io.to(`game:${event.gameId}`).emit('game:ended', { ...event.data, playerReveal });
     io.to(`game:${event.gameId}`).emit('game:updated', PrivacyGuard.getPublicState(state));
 
     gameMasterAI

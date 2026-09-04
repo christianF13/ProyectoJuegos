@@ -31,7 +31,7 @@ router.post('/', async (req: Request, res: Response) => {
 
 // GET /api/games/code/:code  — public game info by room code
 router.get('/code/:code', (req: Request, res: Response) => {
-  const state = gameManager.getStateByCode(req.params.code);
+  const state = gameManager.getStateByCode(req.params.code as string);
   if (!state) return res.status(404).json({ error: 'Partida no encontrada' });
   res.json(PrivacyGuard.getPublicState(state));
 });
@@ -39,8 +39,8 @@ router.get('/code/:code', (req: Request, res: Response) => {
 // GET /api/games/:id/player/:playerId  — private player state
 router.get('/:id/player/:playerId', (req: Request, res: Response) => {
   try {
-    const state = gameManager.getState(req.params.id);
-    const playerState = PrivacyGuard.getPlayerState(state, req.params.playerId);
+    const state = gameManager.getState(req.params.id as string);
+    const playerState = PrivacyGuard.getPlayerState(state, req.params.playerId as string);
     if (!playerState) return res.status(404).json({ error: 'Jugador no encontrado' });
     res.json(playerState);
   } catch (err: any) {
@@ -51,7 +51,7 @@ router.get('/:id/player/:playerId', (req: Request, res: Response) => {
 // POST /api/games/:id/start
 router.post('/:id/start', async (req: Request, res: Response) => {
   try {
-    await gameManager.startGame(req.params.id);
+    await gameManager.startGame(req.params.id as string);
     res.json({ success: true });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -61,10 +61,10 @@ router.post('/:id/start', async (req: Request, res: Response) => {
 // POST /api/games/:id/bots (SOLO PARA PRUEBAS)
 router.post('/:id/bots', async (req: Request, res: Response) => {
   try {
-    const state = gameManager.getState(req.params.id);
+    const state = gameManager.getState(req.params.id as string);
     const needed = 4 - state.players.length;
     for (let i = 0; i < needed; i++) {
-      await gameManager.addPlayer(req.params.id, `Bot ${i + 1}`);
+      await gameManager.addPlayer(req.params.id as string, `Bot ${i + 1}`);
     }
     res.json({ success: true, added: needed });
   } catch (err: any) {

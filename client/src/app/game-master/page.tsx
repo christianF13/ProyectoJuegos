@@ -203,7 +203,7 @@ export default function GameMasterPage() {
         </aside>
 
         {/* MAIN CENTER — Phase + Timer */}
-        <main className="flex-1 flex flex-col items-center justify-center gap-8 px-8 py-6">
+        <main className="flex-1 flex flex-col items-center justify-center gap-4 px-8 py-6 overflow-y-auto">
           {/* Phase display */}
           <PhaseDisplay
             phase={currentPhase}
@@ -226,9 +226,9 @@ export default function GameMasterPage() {
 
           {/* Control buttons */}
           {!gameState && (
-            <div className="flex flex-col gap-6 items-center mt-10">
+            <div className="flex flex-col gap-6 items-center mt-4">
               <h1 className="text-4xl font-black text-village-gold tracking-widest text-center">EL PORTAL<br/>DE JUEGOS</h1>
-              <p className="text-gray-400 text-center max-w-sm">
+              <p className="text-gray-400 text-center max-w-sm text-sm">
                 Selecciona un juego para abrir la sala y comenzar la aventura.
               </p>
               
@@ -253,21 +253,21 @@ export default function GameMasterPage() {
           )}
 
           {gameState?.status === 'lobby' && (
-            <div className="flex flex-col items-center gap-6 w-full mt-4">
-              <div className="bg-white p-4 rounded-2xl shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+            <div className="flex flex-col items-center gap-4 w-full mt-2">
+              <div className="bg-white p-3 rounded-xl shadow-[0_0_30px_rgba(255,255,255,0.1)]">
                 {originUrl && (
                   <QRCode
                     value={`${originUrl}/player`}
-                    size={180}
+                    size={160}
                     level="H"
                   />
                 )}
               </div>
-              <p className="text-gray-400 text-center max-w-sm">
+              <p className="text-gray-400 text-center max-w-sm text-sm">
                 Escanea el código QR para entrar a la sala, o diles que entren a la web e ingresen el código:
               </p>
-              <div className="bg-night-card border border-night-border rounded-xl px-8 py-3">
-                <p className="text-3xl font-black text-white tracking-[0.2em]">{gameCode}</p>
+              <div className="bg-night-card border border-night-border rounded-xl px-6 py-2">
+                <p className="text-2xl font-black text-white tracking-[0.2em]">{gameCode}</p>
               </div>
 
               <div className="flex flex-col items-center gap-2 mt-2">

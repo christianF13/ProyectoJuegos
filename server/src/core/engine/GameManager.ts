@@ -135,7 +135,7 @@ class GameManager {
       });
       if (!canAct) {
         console.log(`[FLOW ENGINE] Saltando fase ${phaseId}: No hay jugadores vivos requeridos.`);
-        const next = typeof phaseDef.nextPhase === 'function' ? phaseDef.nextPhase(state) : phaseDef.nextPhase;
+        const next = phaseDef.nextPhase;
         if (next) {
           // Pequeña pausa para no bloquear la pila
           setTimeout(() => this.startPhase(gameId, next).catch(console.error), 100);

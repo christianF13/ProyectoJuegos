@@ -68,7 +68,7 @@ export function useVoice() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'xi-api-key': ELEVENLABS_API_KEY,
+          'xi-api-key': ELEVENLABS_API_KEY || '',
         },
         body: JSON.stringify({
           text: cleanTextForSpeech(text),

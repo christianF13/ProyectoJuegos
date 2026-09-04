@@ -317,7 +317,8 @@ export default function PlayerPage() {
         />
       ) : (
         <VotePanel
-          targets={aliveTargets.filter(t => t.id !== myPlayer?.id)}
+          targets={aliveTargets}
+          myPlayerId={myPlayer?.id}
           onVote={handleVote}
           onTargetSelect={targetId => emit('player:target_preview', { targetId })}
           votePreviews={wolfPreviews}

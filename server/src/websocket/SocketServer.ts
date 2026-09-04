@@ -358,9 +358,21 @@ function setupGlobalEventBroadcasting(io: SocketIOServer): void {
     }
   });
 
-  // Vote cast — notify all (not who voted for whom)
+  // Vote cast — notify all + broadcast bot preview intentions
   eventBus.on(GameEventType.VOTE_CAST, (event) => {
-    io.to(`game:${event.gameId}`).emit('game:vote_counted', { message: 'Un voto ha sido registrado' });
+    if (event.data.isPreview) {
+      // Bot telegraphing its vote — send preview to all alive human players
+      const state = gameManager.getState(event.gameId);
+      const humans = state.players.filter(p => p.isAlive && !p.name.startsWith('Bot'));
+      for (const p of humans) {
+        io.to(`player:${p.id}`).emit('player:wolf_preview', {
+          wolfName: event.data.voterName,
+          targetId: event.data.targetId,
+        });
+      }
+    } else {
+      io.to(`game:${event.gameId}`).emit('game:vote_counted', { message: 'Un voto ha sido registrado' });
+    }
   });
 
   // Game ended

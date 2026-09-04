@@ -330,6 +330,13 @@ class GameManager {
           }
           if (targets.length > 0) {
             const target = targets[Math.floor(Math.random() * targets.length)];
+            // Broadcast bot's vote intention to all alive human players
+            await eventBus.emit({
+              type: GameEventType.VOTE_CAST, // reuse to trigger preview broadcast
+              gameId,
+              timestamp: new Date(),
+              data: { voterId: bot.id, targetId: target.id, voterName: bot.name, isPreview: true },
+            });
             await this.submitVote(gameId, bot.id, target.id).catch(() => {});
           }
         } else {

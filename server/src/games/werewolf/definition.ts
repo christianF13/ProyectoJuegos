@@ -10,50 +10,41 @@ function assignRoles(playerIds: string[], definition: GameDefinition): Map<strin
   const assignments = new Map<string, string>();
   const count = playerIds.length;
 
-  // 1. Determinar cantidad de lobos base (aprox 1/3 o 1/4 de los jugadores)
-  const wolfCount = count <= 6 ? 1 : count <= 10 ? 2 : count <= 14 ? 3 : 4;
-  const wolfPoints = wolfCount * -6;
+  // ── Role table: guaranteed composition per player count ──────────────
+  // Format: [wolves, seer, witch, healer, caperucita]
+  // Remaining slots = villagers
+  const roleTable: Record<number, [number,number,number,number,number]> = {
+    4:  [1, 1, 0, 0, 0],   // 1 lobo, 1 vidente, 2 aldeanos
+    5:  [1, 1, 1, 0, 0],   // + bruja
+    6:  [1, 1, 1, 1, 0],   // + curandero
+    7:  [1, 1, 1, 1, 1],   // + caperucita
+    8:  [2, 1, 1, 1, 1],   // 2 lobos
+    9:  [2, 1, 1, 1, 1],   // 2 lobos + rest aldeanos
+    10: [2, 1, 1, 1, 1],
+    11: [3, 1, 1, 1, 1],
+    12: [3, 1, 1, 1, 1],
+    13: [3, 1, 1, 1, 1],
+    14: [4, 1, 1, 1, 1],
+    15: [4, 1, 1, 1, 1],
+    16: [4, 1, 1, 1, 1],
+    17: [4, 1, 1, 1, 1],
+    18: [5, 1, 1, 1, 1],
+  };
 
-  // 2. Si todos los demás fueran aldeanos normales (+1)
-  let villagePoints = (count - wolfCount) * 1;
-  let currentBalance = wolfPoints + villagePoints;
+  const [wolves, seers, witches, healers, caperucitas] = roleTable[count] ?? roleTable[18];
 
-  // 3. Mejoras disponibles (valor neto al cambiar un aldeano por este rol)
-  // Vidente (+7) aporta +6 sobre el aldeano. Bruja (+5) aporta +4, etc.
-  const upgrades = [
-    { id: 'seer', netValue: 6 },
-    { id: 'witch', netValue: 4 },
-    { id: 'healer', netValue: 2 },
-    { id: 'caperucita', netValue: 2 }
+  const roleList: string[] = [
+    ...Array(wolves).fill('werewolf'),
+    ...Array(seers).fill('seer'),
+    ...Array(witches).fill('witch'),
+    ...Array(healers).fill('healer'),
+    ...Array(caperucitas).fill('caperucita'),
   ];
+  // Fill the rest with villagers
+  while (roleList.length < count) roleList.push('villager');
 
-  const selectedUpgrades: string[] = [];
-
-  // Algoritmo Greedy: intentamos acercar el balance a 0
-  for (const upgrade of upgrades) {
-    // Si estamos en negativo y esta mejora no nos pasa exageradamente al lado positivo
-    if (currentBalance < 0) {
-      // Si agregar esto nos acerca a 0 (incluso pasándonos un poco)
-      const diffSinMejora = Math.abs(currentBalance);
-      const diffConMejora = Math.abs(currentBalance + upgrade.netValue);
-      
-      if (diffConMejora < diffSinMejora || currentBalance + upgrade.netValue <= 2) {
-        selectedUpgrades.push(upgrade.id);
-        currentBalance += upgrade.netValue;
-      }
-    }
-  }
-
-  // 4. Asignar los roles a los jugadores
-  let idx = 0;
-  for (let i = 0; i < wolfCount && idx < shuffled.length; i++) {
-    assignments.set(shuffled[idx++], 'werewolf');
-  }
-  for (const roleId of selectedUpgrades) {
-    if (idx < shuffled.length) assignments.set(shuffled[idx++], roleId);
-  }
-  while (idx < shuffled.length) {
-    assignments.set(shuffled[idx++], 'villager');
+  for (let i = 0; i < shuffled.length; i++) {
+    assignments.set(shuffled[i], roleList[i]);
   }
 
   return assignments;

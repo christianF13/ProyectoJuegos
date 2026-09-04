@@ -23,7 +23,15 @@ export function initializeSocketServer(httpServer: HTTPServer): SocketIOServer {
     // ── Game Master screen ──────────────────────────────────────────
     socket.on('gm:join', ({ gameId }: { gameId?: string }) => {
       socket.join('gm');
-      if (gameId) socket.join(`game:${gameId}`);
+      if (gameId) {
+        socket.join(`game:${gameId}`);
+        try {
+          const state = gameManager.getState(gameId);
+          if (state) {
+             socket.emit('game:updated', PrivacyGuard.getPublicState(state));
+          }
+        } catch(e) {}
+      }
       socket.emit('gm:joined', { message: 'Conectado como Game Master' });
       console.log('🎮 Game Master conectado');
     });

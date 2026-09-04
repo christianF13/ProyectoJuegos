@@ -268,24 +268,25 @@ export default function GameMasterPage() {
                 </p>
                 <button
                   onClick={startGame}
-                disabled={gameState.players.length < 4}
-                className="px-10 py-4 bg-village-gold text-black font-bold text-lg rounded-xl hover:bg-yellow-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-village-gold/20"
-              >
-                🚀 Iniciar Partida
-              </button>
-              {gameState.players.length < 4 && (
-                <>
-                  <p className="text-xs text-gray-600">Mínimo 4 jugadores para comenzar</p>
-                  <button
-                    onClick={() => {
-                      if (gameId) emit('gm:add_bots', { gameId });
-                    }}
-                    className="mt-2 px-4 py-2 bg-night-border border border-gray-700 text-gray-400 text-xs rounded-lg hover:text-white transition-all"
-                  >
-                    🤖 Rellenar con Bots (Modo Prueba)
-                  </button>
-                </>
-              )}
+                  disabled={gameState.players.length < 4}
+                  className="px-10 py-4 bg-village-gold text-black font-bold text-lg rounded-xl hover:bg-yellow-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-village-gold/20"
+                >
+                  🚀 Iniciar Partida
+                </button>
+                {gameState.players.length < 4 && (
+                  <>
+                    <p className="text-xs text-gray-600 mt-2">Mínimo 4 jugadores para comenzar</p>
+                    <button
+                      onClick={() => {
+                        if (gameId) emit('gm:add_bots', { gameId });
+                      }}
+                      className="mt-2 px-4 py-2 bg-night-border border border-gray-700 text-gray-400 text-xs rounded-lg hover:text-white transition-all"
+                    >
+                      🤖 Rellenar con Bots (Modo Prueba)
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           )}
 

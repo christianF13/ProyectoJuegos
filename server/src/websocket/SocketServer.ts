@@ -279,13 +279,16 @@ function setupGlobalEventBroadcasting(io: SocketIOServer): void {
       );
 
       if (availableActions.length > 0) {
+        // Healer cannot heal themselves — exclude self from healer targets
+        const isHealer = player.roleId === 'healer';
         const targets = state.players
-          .filter(p => p.id !== player.id && p.isAlive)
+          .filter(p => p.isAlive && (isHealer ? p.id !== player.id : true))
           .map(p => ({ id: p.id, name: p.name }));
 
         io.to(`player:${player.id}`).emit('player:actions_available', {
           actions: availableActions,
           targets,
+          privateInfo: player.privateInfo,
         });
       } else {
         io.to(`player:${player.id}`).emit('player:waiting', { phase: event.data.phase });

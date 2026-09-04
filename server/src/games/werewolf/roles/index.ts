@@ -65,7 +65,7 @@ export const curanderoRole: RoleDefinition = {
   minCount: 0,
   nightActions: ['healer_protect'],
   dayActions: ['vote'],
-  privateInstructions: 'Eres el Curandero. Cada noche puedes proteger a un jugador (incluso a ti mismo). Ese jugador sobrevivirá si los lobos lo atacan.',
+  privateInstructions: 'Eres el Curandero. Cada noche puedes proteger a un jugador. Si los lobos lo atacan esa noche, sobrevivirá. ¡Atención! NO puedes protegerte a ti mismo.',
   publicDescription: 'Jugador con rol desconocido.',
   revealsOnElimination: true,
 };

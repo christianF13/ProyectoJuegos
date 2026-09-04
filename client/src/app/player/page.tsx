@@ -170,10 +170,11 @@ export default function PlayerPage() {
 
           // Check if this player was eliminated
           const myEntry = (state.players ?? []).find((p: any) => p.id === me.id);
-          if (myEntry && !myEntry.isAlive && screen !== 'eliminated') {
+          if (myEntry && !myEntry.isAlive) {
             setScreen('eliminated');
           }
         }
+        // IMPORTANT: never reset from role_revealed or night_action — those are driven by separate events
       }),
 
       // Phase changed — update screen accordingly

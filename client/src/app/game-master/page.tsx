@@ -59,7 +59,13 @@ export default function GameMasterPage() {
   const gameIdRef = useRef<string | null>(null);
 
   const addLog = (msg: string) => setLogs(prev => [...prev.slice(-8), msg]);
+
+  // Client-side origin for QR Code
+  const [originUrl, setOriginUrl] = useState('');
+
+  // ── Socket event handlers ──────────────────────────────────────────
   useEffect(() => {
+    setOriginUrl(window.location.origin);
     emit('gm:join', {});
     // El fetch falla por culpa del CORS de LocalTunnel en navegadores.
     // Como solo hay un juego por ahora, lo fijamos manualmente:
@@ -249,11 +255,13 @@ export default function GameMasterPage() {
           {gameState?.status === 'lobby' && (
             <div className="flex flex-col items-center gap-6 w-full mt-4">
               <div className="bg-white p-4 rounded-2xl shadow-[0_0_30px_rgba(255,255,255,0.1)]">
-                <QRCode
-                  value={`${typeof window !== 'undefined' ? window.location.origin : ''}/player`}
-                  size={180}
-                  level="H"
-                />
+                {originUrl && (
+                  <QRCode
+                    value={`${originUrl}/player`}
+                    size={180}
+                    level="H"
+                  />
+                )}
               </div>
               <p className="text-gray-400 text-center max-w-sm">
                 Escanea el código QR para entrar a la sala, o diles que entren a la web e ingresen el código:

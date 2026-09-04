@@ -29,29 +29,32 @@ export default function VoiceInterface({
 
   return (
     <div className="flex flex-col items-center gap-4 w-full h-full max-h-full">
-      {/* GM Response text */}
-      {gmText && (
-        <div className="w-full bg-night-card border border-night-border rounded-2xl p-5 text-center flex-1 min-h-0 overflow-y-auto flex flex-col">
-          <p className="text-xs text-gray-600 tracking-widest mb-2 uppercase shrink-0">Game Master dice</p>
-          <p className={`text-lg text-gray-200 leading-relaxed italic flex-1 ${isSpeaking ? 'text-white' : ''}`}>
-            "{gmText}"
-          </p>
-          {isSpeaking && (
-            <div className="flex items-center justify-center gap-1 mt-3 shrink-0">
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className="w-1 bg-village-gold rounded-full animate-pulse"
-                  style={{
-                    height: `${Math.random() * 16 + 8}px`,
-                    animationDelay: `${i * 0.1}s`,
-                  }}
-                />
-              ))}
-            </div>
-          )}
+      {/* Eldrin Avatar */}
+      <div className="w-full flex-1 flex flex-col items-center justify-center min-h-0 relative">
+        <div className={`relative rounded-full overflow-hidden border-4 transition-all duration-500 ease-in-out ${isSpeaking ? 'border-village-gold shadow-[0_0_50px_rgba(234,179,8,0.5)] scale-105' : 'border-gray-800'}`}>
+           <img 
+             src="/eldrin.jpg" 
+             alt="Eldrin the Game Master" 
+             className={`w-64 h-64 object-cover ${isSpeaking ? 'brightness-110' : 'brightness-75'}`}
+           />
+           {isSpeaking && (
+             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center justify-center gap-1 bg-black/50 px-3 py-2 rounded-full">
+               {[...Array(5)].map((_, i) => (
+                 <div
+                   key={i}
+                   className="w-1 bg-village-gold rounded-full animate-pulse"
+                   style={{
+                     height: `${Math.random() * 16 + 8}px`,
+                     animationDelay: `${i * 0.1}s`,
+                   }}
+                 />
+               ))}
+             </div>
+           )}
         </div>
-      )}
+        <p className="mt-4 text-2xl font-black text-village-gold tracking-wider">ELDRIN</p>
+        <p className="text-gray-500 uppercase tracking-widest text-xs">Tu Maestro de Juegos</p>
+      </div>
 
       {/* Mic button */}
       <div className="flex flex-col items-center gap-3">

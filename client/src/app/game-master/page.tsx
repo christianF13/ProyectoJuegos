@@ -6,6 +6,7 @@ import VoiceInterface from '@/components/game-master/VoiceInterface';
 import PhaseDisplay from '@/components/game-master/PhaseDisplay';
 import PlayerList from '@/components/game-master/PlayerList';
 import Timer from '@/components/game-master/Timer';
+import QRCode from 'react-qr-code';
 
 interface PublicPlayer {
   id: string;
@@ -219,27 +220,54 @@ export default function GameMasterPage() {
 
           {/* Control buttons */}
           {!gameState && (
-            <div className="flex flex-col gap-3 items-center">
-              <p className="text-sm text-gray-500 mb-2">Crear nueva partida:</p>
-              {availableGames.map(g => (
-                <button
-                  key={g.id}
-                  onClick={() => createGame(g.id)}
-                  className="px-8 py-3 bg-village-gold/10 border border-village-gold/30 rounded-xl text-village-gold font-semibold hover:bg-village-gold/20 hover:border-village-gold/60 transition-all"
-                >
-                  🎲 Crear partida: {g.name}
-                </button>
-              ))}
+            <div className="flex flex-col gap-6 items-center mt-10">
+              <h1 className="text-4xl font-black text-village-gold tracking-widest text-center">EL PORTAL<br/>DE JUEGOS</h1>
+              <p className="text-gray-400 text-center max-w-sm">
+                Selecciona un juego para abrir la sala y comenzar la aventura.
+              </p>
+              
+              <div className="grid gap-4 w-full max-w-md">
+                {availableGames.map(g => (
+                  <button
+                    key={g.id}
+                    onClick={() => {
+                      speak(`Excelente elección. He preparado la sala para ${g.name}. Que los jugadores entren por el portal.`);
+                      createGame(g.id);
+                    }}
+                    className="group relative px-8 py-5 bg-night-card border border-village-gold/30 rounded-2xl hover:border-village-gold transition-all overflow-hidden shadow-lg hover:shadow-village-gold/20"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-village-gold/0 via-village-gold/10 to-village-gold/0 translate-x-[-100%] group-hover:animate-[shimmer_1.5s_infinite]" />
+                    <p className="text-village-gold font-bold text-xl text-center flex items-center justify-center gap-3">
+                      <span className="text-3xl">🔮</span> {g.name}
+                    </p>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
           {gameState?.status === 'lobby' && (
-            <div className="flex flex-col items-center gap-3">
-              <p className="text-sm text-gray-500">
-                {gameState.players.length} jugador{gameState.players.length !== 1 ? 'es' : ''} en sala
+            <div className="flex flex-col items-center gap-6 w-full mt-4">
+              <div className="bg-white p-4 rounded-2xl shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                <QRCode
+                  value={`${typeof window !== 'undefined' ? window.location.origin : ''}/player`}
+                  size={180}
+                  level="H"
+                />
+              </div>
+              <p className="text-gray-400 text-center max-w-sm">
+                Escanea el código QR para entrar a la sala, o diles que entren a la web e ingresen el código:
               </p>
-              <button
-                onClick={startGame}
+              <div className="bg-night-card border border-night-border rounded-xl px-8 py-3">
+                <p className="text-3xl font-black text-white tracking-[0.2em]">{gameCode}</p>
+              </div>
+
+              <div className="flex flex-col items-center gap-2 mt-2">
+                <p className="text-sm text-gray-500 font-bold uppercase tracking-widest">
+                  {gameState.players.length} jugador{gameState.players.length !== 1 ? 'es' : ''} en sala
+                </p>
+                <button
+                  onClick={startGame}
                 disabled={gameState.players.length < 4}
                 className="px-10 py-4 bg-village-gold text-black font-bold text-lg rounded-xl hover:bg-yellow-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-village-gold/20"
               >

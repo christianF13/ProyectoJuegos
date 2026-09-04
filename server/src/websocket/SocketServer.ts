@@ -162,6 +162,17 @@ export function initializeSocketServer(httpServer: HTTPServer): SocketIOServer {
             });
           }
         }
+        
+        // Todos pueden coordinar su voto de día
+        if (player && state.phase === 'day_vote') {
+          const others = state.players.filter(p => p.id !== playerId && p.isAlive);
+          for (const p of others) {
+            io.to(`player:${p.id}`).emit('player:wolf_preview', { // Reusar el mismo evento del front
+              wolfName: player.name,
+              targetId
+            });
+          }
+        }
       } catch (err) {
         console.error('player:target_preview error:', err);
       }

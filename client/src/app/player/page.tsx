@@ -94,8 +94,23 @@ export default function PlayerPage() {
         // El usuario debe darle al botón "¡Entendido!" para continuar.
       }),
 
+      // Wolf coordination preview
+      on('player:wolf_preview', ({ wolfName, targetId }: { wolfName: string; targetId: string }) => {
+        setWolfPreviews(prev => ({ ...prev, [wolfName]: targetId }));
+      }),
+
+      // Day vote coordination preview
+      on('player:vote_preview', ({ sourceName, targetId }: { sourceName: string; targetId: string }) => {
+        setWolfPreviews(prev => ({ ...prev, [sourceName]: targetId }));
+      }),
+
       // Server sends available actions for this player
-      on('player:actions_available', ({ actions: acts, targets: tgts }: { actions: ActionDef[]; targets: Target[] }) => {
+      on('player:actions_available', (payload: any) => {
+        const { actions: acts, targets: tgts, privateInfo } = payload;
+        if (privateInfo) {
+           setMyPlayer(prev => prev ? { ...prev, privateInfo } : null);
+           myPlayerRef.current = myPlayerRef.current ? { ...myPlayerRef.current, privateInfo } : null;
+        }
         setActions(acts);
         setTargets(tgts);
         setActionConfirmed(false);
@@ -104,6 +119,7 @@ export default function PlayerPage() {
 
       // Player has no action this phase
       on('player:waiting', ({ phase }: { phase: string }) => {
+        setWolfPreviews({}); // Clear previews
         setCurrentPhase(phase);
         if (phase.startsWith('night')) setScreen('night_waiting');
         else if (phase === 'day_discussion') setScreen('day_discussion');
@@ -300,6 +316,8 @@ export default function PlayerPage() {
         <VotePanel
           targets={aliveTargets.filter(t => t.id !== myPlayer?.id)}
           onVote={handleVote}
+          onTargetSelect={targetId => emit('player:target_preview', { targetId })}
+          votePreviews={wolfPreviews}
           confirmed={voteConfirmed}
         />
       );

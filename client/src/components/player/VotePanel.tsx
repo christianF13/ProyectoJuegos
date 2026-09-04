@@ -9,10 +9,12 @@ interface Target {
 interface VotePanelProps {
   targets: Target[];
   onVote: (targetId: string) => void;
+  onTargetSelect?: (targetId: string) => void;
+  votePreviews?: Record<string, string>; // playerName -> targetId
   confirmed?: boolean;
 }
 
-export default function VotePanel({ targets, onVote, confirmed }: VotePanelProps) {
+export default function VotePanel({ targets, onVote, onTargetSelect, votePreviews = {}, confirmed }: VotePanelProps) {
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
@@ -31,6 +33,11 @@ export default function VotePanel({ targets, onVote, confirmed }: VotePanelProps
     );
   }
 
+  const handleTargetSelect = (id: string) => {
+    setSelectedTarget(id);
+    if (onTargetSelect) onTargetSelect(id);
+  };
+
   const handleVote = () => {
     if (!selectedTarget) return;
     onVote(selectedTarget);
@@ -42,23 +49,34 @@ export default function VotePanel({ targets, onVote, confirmed }: VotePanelProps
       <h2 className="text-xl font-black text-white text-center mb-1">Votación</h2>
       <p className="text-xs text-gray-600 text-center tracking-widest uppercase mb-3">¿A quién eliminas?</p>
       <p className="text-gray-500 text-sm text-center mb-8 leading-relaxed">
-        Elige al jugador que crees que es el Hombre Lobo. Tu voto es secreto.
+        Elige al jugador que crees que es el Hombre Lobo. Puedes ver la intención de voto de los demás.
       </p>
 
       <div className="flex-1 space-y-3">
-        {targets.map(target => (
-          <button
-            key={target.id}
-            onClick={() => setSelectedTarget(target.id)}
-            className={`w-full py-5 px-5 rounded-2xl border-2 text-xl font-bold text-center transition-all active:scale-95 ${
-              selectedTarget === target.id
-                ? 'border-red-500 bg-red-500/15 text-red-300 scale-[1.02]'
-                : 'border-night-border bg-night-card text-white hover:border-red-500/40'
-            }`}
-          >
-            {selectedTarget === target.id ? '⚔️ ' : ''}{target.name}
-          </button>
-        ))}
+        {targets.map(target => {
+          const previwingPlayers = Object.entries(votePreviews)
+            .filter(([_, tId]) => tId === target.id)
+            .map(([pName]) => pName);
+
+          return (
+            <button
+              key={target.id}
+              onClick={() => handleTargetSelect(target.id)}
+              className={`w-full py-5 px-5 rounded-2xl border-2 text-xl font-bold text-center transition-all active:scale-95 ${
+                selectedTarget === target.id
+                  ? 'border-red-500 bg-red-500/15 text-red-300 scale-[1.02]'
+                  : 'border-night-border bg-night-card text-white hover:border-red-500/40'
+              }`}
+            >
+              {selectedTarget === target.id ? '⚔️ ' : ''}{target.name}
+              {previwingPlayers.length > 0 && (
+                <div className="text-xs text-red-400 mt-2 font-normal">
+                  👀 {previwingPlayers.join(', ')} quiere(n) votar aquí
+                </div>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <div className="pt-6">

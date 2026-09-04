@@ -1,0 +1,29 @@
+export enum GameEventType {
+  GAME_CREATED = 'GAME_CREATED',
+  PLAYER_JOINED = 'PLAYER_JOINED',
+  ROLES_ASSIGNED = 'ROLES_ASSIGNED',
+  GAME_STARTED = 'GAME_STARTED',
+  PHASE_STARTED = 'PHASE_STARTED',
+  PHASE_ENDED = 'PHASE_ENDED',
+  PLAYER_ACTION = 'PLAYER_ACTION',
+  ACTION_CONFIRMED = 'ACTION_CONFIRMED',
+  ACTIONS_PROCESSED = 'ACTIONS_PROCESSED',
+  PLAYER_ELIMINATED = 'PLAYER_ELIMINATED',
+  VOTE_CAST = 'VOTE_CAST',
+  VOTE_RESULT = 'VOTE_RESULT',
+  TIMER_TICK = 'TIMER_TICK',
+  TIMER_ENDED = 'TIMER_ENDED',
+  VICTORY_CONDITION_MET = 'VICTORY_CONDITION_MET',
+  GAME_ENDED = 'GAME_ENDED',
+  GM_MESSAGE = 'GM_MESSAGE',
+  ERROR = 'ERROR',
+}
+
+export interface GameEvent {
+  type: GameEventType;
+  gameId: string;
+  timestamp: Date;
+  data: Record<string, unknown>;
+}
+
+export type EventHandler = (event: GameEvent) => void | Promise<void>;

@@ -7,6 +7,7 @@ import PhaseDisplay from '@/components/game-master/PhaseDisplay';
 import PlayerList from '@/components/game-master/PlayerList';
 import Timer from '@/components/game-master/Timer';
 import QRCode from 'react-qr-code';
+import { soundEngine } from '@/lib/soundEngine';
 
 interface PublicPlayer {
   id: string;
@@ -63,6 +64,18 @@ export default function GameMasterPage() {
   // Client-side origin for QR Code
   const [originUrl, setOriginUrl] = useState('');
 
+  // Modo de Narración: 'room' (Alexa / Altavoz Bluetooth con SFX) | 'remote' (Web solo voz)
+  const [audioMode, setAudioMode] = useState<'room' | 'remote'>('room');
+  const audioModeRef = useRef<'room' | 'remote'>('room');
+
+  const handleToggleAudioMode = (mode: 'room' | 'remote') => {
+    setAudioMode(mode);
+    audioModeRef.current = mode;
+    if (mode === 'room') {
+      soundEngine.playMorningBell();
+    }
+  };
+
   // ── Socket event handlers ──────────────────────────────────────────
   useEffect(() => {
     setOriginUrl(window.location.origin);
@@ -96,18 +109,39 @@ export default function GameMasterPage() {
         setAnnouncement(ann || '');
         setTimer(null);
         addLog(`Fase: ${phase}`);
+
+        if (audioModeRef.current === 'room') {
+          if (phase === 'night_start' || phase === 'night') {
+            soundEngine.playNightFall();
+          } else if (phase === 'day_discussion') {
+            soundEngine.playMorningBell();
+          } else if (phase === 'day_vote') {
+            soundEngine.playSuspenseDrums();
+          } else if (phase.startsWith('night_')) {
+            soundEngine.playMagicChime();
+          }
+        }
       }),
       on('game:timer', (t: TimerState) => setTimer(t)),
       on('game:player_eliminated', ({ playerName, roleId }: { playerName: string; roleId: string }) => {
         addLog(`💀 ${playerName} eliminado`);
+        if (audioModeRef.current === 'room') {
+          soundEngine.playDeathGong();
+        }
       }),
       on('game:announcement', ({ messages }: { messages: string[] }) => {
         const text = messages.join(' ');
         addLog(text);
         setAnnouncement(text);
+        if (audioModeRef.current === 'room' && (text.includes('eliminado') || text.includes('horca') || text.includes('muerte'))) {
+          soundEngine.playDeathGong();
+        }
       }),
       on('game:ended', ({ winnerFaction }: { winnerFaction: string }) => {
         addLog(`🏆 Ganador: ${winnerFaction === 'wolves' ? 'Hombres Lobo' : 'Aldeanos'}`);
+        if (audioModeRef.current === 'room') {
+          soundEngine.playVictoryFanfare();
+        }
       }),
       on('error', ({ message }: { message: string }) => addLog(`⚠️ ${message}`)),
     ];
@@ -318,11 +352,62 @@ export default function GameMasterPage() {
           )}
         </main>
 
-        {/* RIGHT SIDEBAR — Voice */}
-        <aside className="w-72 border-l border-night-border bg-night-card/50 flex flex-col p-4 gap-4 shrink-0">
+        {/* RIGHT SIDEBAR — Voice & Audio Mode */}
+        <aside className="w-80 border-l border-night-border bg-night-card/50 flex flex-col p-4 gap-3 shrink-0">
           <div>
-            <p className="text-xs text-gray-600 tracking-widest uppercase mb-3">Game Master AI</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-gray-500 tracking-widest uppercase">Modo de Audio</p>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                audioMode === 'room' ? 'bg-village-gold/20 text-village-gold border border-village-gold/40' : 'bg-gray-800 text-gray-400'
+              }`}>
+                {audioMode === 'room' ? '🔊 Salón' : '🌐 Remoto'}
+              </span>
+            </div>
+
+            {/* Audio Mode Switcher */}
+            <div className="grid grid-cols-2 gap-1.5 p-1 bg-black/40 border border-night-border rounded-xl mb-2">
+              <button
+                onClick={() => handleToggleAudioMode('room')}
+                className={`py-2 px-2 rounded-lg text-xs font-bold transition-all flex flex-col items-center gap-0.5 ${
+                  audioMode === 'room'
+                    ? 'bg-village-gold text-black shadow-md'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <span className="text-sm">🔊 Salón (Alexa)</span>
+                <span className="text-[9px] font-normal opacity-75">SFX + Voz</span>
+              </button>
+              <button
+                onClick={() => handleToggleAudioMode('remote')}
+                className={`py-2 px-2 rounded-lg text-xs font-bold transition-all flex flex-col items-center gap-0.5 ${
+                  audioMode === 'remote'
+                    ? 'bg-village-gold text-black shadow-md'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <span className="text-sm">🌐 Remoto</span>
+                <span className="text-[9px] font-normal opacity-75">Solo Voz</span>
+              </button>
+            </div>
+
+            {audioMode === 'room' && (
+              <div className="p-2.5 bg-village-gold/10 border border-village-gold/30 rounded-xl text-[11px] text-gray-300 leading-snug">
+                <p className="font-semibold text-village-gold mb-1 flex items-center gap-1">
+                  <span>📻</span> Parlante Alexa / Bluetooth
+                </p>
+                <p className="text-gray-400 text-[10px] mb-2">
+                  Conecta tu laptop/móvil diciendo: <em className="text-white">"Alexa, conecta Bluetooth"</em>.
+                </p>
+                <button
+                  onClick={() => soundEngine.playNightFall()}
+                  className="w-full py-1.5 bg-night border border-village-gold/40 text-village-gold rounded-lg hover:bg-village-gold hover:text-black font-bold transition-all text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
+                >
+                  <span>🐺</span> Probar Sonido en Alexa
+                </button>
+              </div>
+            )}
           </div>
+
           <div className="flex-1 min-h-0 flex flex-col justify-end">
             <VoiceInterface
               isListening={isListening}
@@ -333,10 +418,11 @@ export default function GameMasterPage() {
               onTextSubmit={handleTextSubmit}
             />
           </div>
-          <div className="border-t border-night-border pt-4">
-            <p className="text-xs text-gray-700 text-center leading-relaxed">
-              Presiona el micrófono y habla.<br />
-              El Game Master responderá por voz.
+          <div className="border-t border-night-border pt-3">
+            <p className="text-[11px] text-gray-600 text-center leading-relaxed">
+              {audioMode === 'room'
+                ? '🔊 Efectos ambientales cinemáticos activados.'
+                : '🌐 Modo voz estándar para jugadores a distancia.'}
             </p>
           </div>
         </aside>

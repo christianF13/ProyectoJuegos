@@ -90,8 +90,18 @@ export default function ActionPanel({ actions, targets, onAction, onTargetSelect
         </div>
       )}
 
-      {/* Auto-select if only one action */}
-      {actions.length === 1 && !selectedAction && (() => { setSelectedAction(actions[0].id); return null; })()}
+      {/* Auto-select if only one valid unused action */}
+      {(() => {
+        const unused = actions.filter(a => {
+          if (a.id === 'witch_save' && privateInfo?.lifePotion === 'used') return false;
+          if (a.id === 'witch_kill' && privateInfo?.deathPotion === 'used') return false;
+          return true;
+        });
+        if (unused.length === 1 && selectedAction !== unused[0].id) {
+          setSelectedAction(unused[0].id);
+        }
+        return null;
+      })()}
 
       {/* Select target */}
       {(selectedAction || actions.length === 1) && needsTarget && (

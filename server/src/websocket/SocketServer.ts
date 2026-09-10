@@ -277,9 +277,13 @@ function setupGlobalEventBroadcasting(io: SocketIOServer): void {
     if (!definition) return;
 
     for (const player of state.players.filter(p => p.isAlive)) {
-      const availableActions = definition.actions.filter(
-        a => a.roleId === player.roleId && a.phase === (event.data.phase as string)
-      );
+      const availableActions = definition.actions.filter(a => {
+        if (a.roleId !== player.roleId) return false;
+        if (a.phase !== (event.data.phase as string)) return false;
+        if (a.id === 'witch_save' && player.privateInfo?.lifePotion === 'used') return false;
+        if (a.id === 'witch_kill' && player.privateInfo?.deathPotion === 'used') return false;
+        return true;
+      });
 
       if (availableActions.length > 0) {
         const isHealer = player.roleId === 'healer';

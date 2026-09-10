@@ -129,8 +129,24 @@ export default function PlayerPage() {
       }),
 
       // Action confirmed by server
-      on('player:action_confirmed', () => {
+      on('player:action_confirmed', ({ actionId }: { actionId?: string }) => {
         setActionConfirmed(true);
+        if (actionId === 'witch_save' && myPlayerRef.current) {
+          const updated = {
+            ...myPlayerRef.current,
+            privateInfo: { ...myPlayerRef.current.privateInfo, lifePotion: 'used' },
+          };
+          setMyPlayer(updated);
+          myPlayerRef.current = updated;
+        }
+        if (actionId === 'witch_kill' && myPlayerRef.current) {
+          const updated = {
+            ...myPlayerRef.current,
+            privateInfo: { ...myPlayerRef.current.privateInfo, deathPotion: 'used' },
+          };
+          setMyPlayer(updated);
+          myPlayerRef.current = updated;
+        }
         setScreen('night_waiting');
       }),
 

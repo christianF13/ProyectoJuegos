@@ -99,31 +99,47 @@ function processNightEnd(state: GameState): PhaseResult {
     }
   }
 
-  // Witch save — can only be used if victim still alive (healer didn't save them)
+  // Witch save — marks lifePotion used whether victim saved or not
   const witchSave = nightActions.find(a => a.actionId === 'witch_save');
   let witchSaved = false;
-  if (witchSave && victimId) {
+  if (witchSave) {
     const witch = state.players.find(p => p.roleId === 'witch' && p.isAlive);
     if (witch) {
       witch.privateInfo = { ...witch.privateInfo, lifePotion: 'used' };
-      witchSaved = true;
-      victimId = null; // saved!
+      if (victimId) {
+        witchSaved = true;
+        victimId = null; // saved!
+      }
     }
   }
 
-  // Witch kill
+  // Witch kill — only eliminates if target is currently alive
   const witchKill = nightActions.find(a => a.actionId === 'witch_kill');
   let witchVictimId: string | null = null;
   if (witchKill?.targetId) {
     const witch = state.players.find(p => p.roleId === 'witch' && p.isAlive);
     if (witch) {
       witch.privateInfo = { ...witch.privateInfo, deathPotion: 'used' };
-      witchVictimId = witchKill.targetId;
-      eliminations.push(witchVictimId);
+      const witchVictim = state.players.find(p => p.id === witchKill.targetId);
+      if (witchVictim && witchVictim.isAlive) {
+        witchVictimId = witchKill.targetId;
+        eliminations.push(witchVictimId);
+      }
     }
   }
 
-  if (victimId) eliminations.push(victimId);
+  // Wolf victim — only eliminates if alive and not already eliminated by witch
+  if (victimId) {
+    const wolfVictim = state.players.find(p => p.id === victimId);
+    if (wolfVictim && wolfVictim.isAlive && !eliminations.includes(victimId)) {
+      eliminations.push(victimId);
+    } else {
+      victimId = null;
+    }
+  }
+
+  // CRITICAL FIX: Limpiar las acciones de la noche para que NO se repitan en noches futuras
+  state.pendingActions = state.pendingActions.filter(a => !a.phase.startsWith('night_'));
 
   // ── Narration ──────────────────────────────────────────────────────
   if (eliminations.length === 0 && !witchSaved) {

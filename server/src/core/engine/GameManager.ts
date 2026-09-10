@@ -127,14 +127,19 @@ class GameManager {
     const phaseDef = definition.phases.find(p => p.id === phaseId);
     if (!phaseDef) throw new Error(`Fase '${phaseId}' no encontrada`);
 
-    // Comprobar si la fase se debe saltar (ej. la bruja está muerta)
+    // Comprobar si la fase se debe saltar (ej. la bruja está muerta o ya gastó sus pociones)
     if (phaseDef.type === 'action') {
       const canAct = phaseDef.allowedActions.some(actionId => {
         const actionDef = definition.actions.find(a => a.id === actionId);
-        return actionDef && state.players.some(p => p.roleId === actionDef.roleId && p.isAlive);
+        return actionDef && state.players.some(p => {
+          if (p.roleId !== actionDef.roleId || !p.isAlive) return false;
+          if (actionDef.id === 'witch_save' && p.privateInfo?.lifePotion === 'used') return false;
+          if (actionDef.id === 'witch_kill' && p.privateInfo?.deathPotion === 'used') return false;
+          return true;
+        });
       });
       if (!canAct) {
-        console.log(`[FLOW ENGINE] Saltando fase ${phaseId}: No hay jugadores vivos requeridos.`);
+        console.log(`[FLOW ENGINE] Saltando fase ${phaseId}: No hay jugadores vivos o con acciones disponibles.`);
         const next = phaseDef.nextPhase;
         if (next) {
           // Pequeña pausa para no bloquear la pila
@@ -197,6 +202,12 @@ class GameManager {
 
     const player = state.players.find(p => p.id === request.playerId)!;
     player.hasActed = true;
+    if (request.actionId === 'witch_save') {
+      player.privateInfo = { ...player.privateInfo, lifePotion: 'used' };
+    }
+    if (request.actionId === 'witch_kill') {
+      player.privateInfo = { ...player.privateInfo, deathPotion: 'used' };
+    }
     state.updatedAt = new Date();
     await this.persist(state);
 
@@ -426,9 +437,17 @@ class GameManager {
     const required = phaseDef.requiredActions.filter(ra => !ra.optional);
     if (required.length === 0) return;
 
-    // Check each required actor (alive players with that role) has acted
+    // Check each required actor (alive players with that role who still have actions) has acted
     const allActed = required.every(ra => {
-      const actors = state.players.filter(p => p.isAlive && p.roleId === ra.roleId);
+      const actors = state.players.filter(p => {
+        if (!p.isAlive || p.roleId !== ra.roleId) return false;
+        if (ra.roleId === 'witch') {
+          const hasSave = p.privateInfo?.lifePotion !== 'used';
+          const hasKill = p.privateInfo?.deathPotion !== 'used';
+          if (!hasSave && !hasKill) return false;
+        }
+        return true;
+      });
       return actors.length === 0 || actors.every(p => p.hasActed);
     });
 

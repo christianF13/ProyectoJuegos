@@ -102,7 +102,9 @@ export default function GameMasterPage() {
         addLog(`💀 ${playerName} eliminado`);
       }),
       on('game:announcement', ({ messages }: { messages: string[] }) => {
-        addLog(messages.join(' '));
+        const text = messages.join(' ');
+        addLog(text);
+        setAnnouncement(text);
       }),
       on('game:ended', ({ winnerFaction }: { winnerFaction: string }) => {
         addLog(`🏆 Ganador: ${winnerFaction === 'wolves' ? 'Hombres Lobo' : 'Aldeanos'}`);

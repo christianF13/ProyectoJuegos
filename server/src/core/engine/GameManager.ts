@@ -287,7 +287,7 @@ class GameManager {
     }
 
     // Advance to next phase
-    if (result.nextPhase === 'night') state.round++;
+    if (result.nextPhase === 'night' || result.nextPhase === 'night_start') state.round++;
     state.updatedAt = new Date();
     await this.persist(state);
     await this.startPhase(gameId, result.nextPhase);
@@ -322,14 +322,40 @@ class GameManager {
 
       for (const bot of bots) {
         if (state.phase === 'day_vote') {
-          // Wolves vote for non-wolves; others vote randomly
           let targets = state.players.filter(p => p.isAlive && p.id !== bot.id);
+          let target: PlayerState | undefined;
+
+          // Existing votes in this round
+          const existingVotes = state.votes.filter(v => v.phase === 'day_vote' && v.round === state.round);
+
           if (bot.faction === 'wolves') {
-            const nonWolves = targets.filter(p => p.faction !== 'wolves');
-            if (nonWolves.length > 0) targets = nonWolves;
+            // Wolves coordinate: check if another wolf already voted
+            const otherWolfVote = existingVotes.find(v => {
+              const voter = state.players.find(p => p.id === v.voterId);
+              return voter?.faction === 'wolves' && v.targetId !== bot.id;
+            });
+
+            if (otherWolfVote) {
+              target = targets.find(p => p.id === otherWolfVote.targetId);
+            }
+
+            if (!target) {
+              const nonWolves = targets.filter(p => p.faction !== 'wolves');
+              if (nonWolves.length > 0) {
+                target = nonWolves[Math.floor(Math.random() * nonWolves.length)];
+              }
+            }
+          } else {
+            // Innocent bots: 70% chance to follow someone who already has votes (bandwagon/consensus)
+            const targetsWithVotes = targets.filter(t => existingVotes.some(v => v.targetId === t.id));
+            if (targetsWithVotes.length > 0 && Math.random() < 0.70) {
+              target = targetsWithVotes[Math.floor(Math.random() * targetsWithVotes.length)];
+            } else if (targets.length > 0) {
+              target = targets[Math.floor(Math.random() * targets.length)];
+            }
           }
-          if (targets.length > 0) {
-            const target = targets[Math.floor(Math.random() * targets.length)];
+
+          if (target) {
             // Broadcast bot's vote intention to all alive human players
             await eventBus.emit({
               type: GameEventType.VOTE_CAST, // reuse to trigger preview broadcast

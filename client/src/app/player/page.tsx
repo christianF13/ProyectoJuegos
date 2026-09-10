@@ -58,6 +58,7 @@ export default function PlayerPage() {
   const [joinError, setJoinError] = useState<string | undefined>();
   const [isJoining, setIsJoining] = useState(false);
   const [winnerInfo, setWinnerInfo] = useState<string | null>(null);
+  const [announcement, setAnnouncement] = useState<string | null>(null);
   const [playerReveal, setPlayerReveal] = useState<Array<{id:string;name:string;roleId:string;faction:string;isAlive:boolean}>>([]);
   const [aliveTargets, setAliveTargets] = useState<Target[]>([]);
   const [actionConfirmed, setActionConfirmed] = useState(false);
@@ -204,6 +205,12 @@ export default function PlayerPage() {
         }
       }),
 
+      // Game announcement (eliminations, night events)
+      on('game:announcement', ({ messages }: { messages: string[] }) => {
+        setAnnouncement(messages.join(' '));
+        setTimeout(() => setAnnouncement(null), 9000);
+      }),
+
       // Game ended
       on('game:ended', (data: { winnerFaction: string; description: string; playerReveal?: any[] }) => {
         setWinnerInfo(data.description);
@@ -238,10 +245,11 @@ export default function PlayerPage() {
   }, [emit]);
 
   // ── Render ─────────────────────────────────────────────────────────
-  switch (screen) {
-    case 'joining':
-      return (
-        <JoinGame
+  const renderContent = () => {
+    switch (screen) {
+      case 'joining':
+        return (
+          <JoinGame
           onJoin={handleJoin}
           isLoading={isJoining}
           error={joinError}
@@ -404,7 +412,20 @@ export default function PlayerPage() {
       );
     }
 
-    default:
-      return null;
-  }
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <>
+      {announcement && (
+        <div className="fixed top-4 left-4 right-4 z-50 bg-red-950/95 border-2 border-red-500/80 rounded-2xl p-4 shadow-[0_0_30px_rgba(239,68,68,0.4)] text-center">
+          <p className="text-xs text-red-300 tracking-widest uppercase mb-1 font-bold">📜 Anuncio de la Aldea</p>
+          <p className="text-white text-sm font-semibold leading-relaxed">{announcement}</p>
+        </div>
+      )}
+      {renderContent()}
+    </>
+  );
 }

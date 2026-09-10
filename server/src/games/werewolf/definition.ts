@@ -155,13 +155,27 @@ function processDayVoteEnd(state: GameState): PhaseResult {
   const eliminations: string[] = [];
   const announcements: string[] = [];
 
-  if (isTie || !winner) {
-    announcements.push('Empate en la votación. Nadie es eliminado hoy. El pueblo tendrá que deliberar más.');
-  } else {
+  const entries = Object.entries(tally).sort((a, b) => b[1] - a[1]);
+
+  if (entries.length === 0) {
+    announcements.push('Nadie emitió ningún voto hoy. El pueblo se retira a descansar sin linchamiento.');
+  } else if (!isTie && winner) {
+    // Ganador claro por mayoría de votos
     eliminations.push(winner);
     const p = state.players.find(pl => pl.id === winner);
     const role = allRoles.find(r => r.id === p?.roleId);
-    announcements.push(`Por votación popular, ${p?.name ?? 'un jugador'} ha sido eliminado. Era ${role?.name ?? 'desconocido'}.`);
+    const voteCount = tally[winner];
+    announcements.push(`Por votación popular con ${voteCount} votos, ${p?.name ?? 'un jugador'} ha sido llevado a la horca. ¡Era ${role?.name ?? 'desconocido'}!`);
+  } else {
+    // Empate entre los más votados: desempate forzado para que siempre se elimine a uno de los más votados
+    const topCount = entries[0][1];
+    const topCandidates = entries.filter(e => e[1] === topCount).map(e => e[0]);
+    const chosen = topCandidates[Math.floor(Math.random() * topCandidates.length)];
+    eliminations.push(chosen);
+    const p = state.players.find(pl => pl.id === chosen);
+    const role = allRoles.find(r => r.id === p?.roleId);
+    const tiedNames = topCandidates.map(id => state.players.find(pl => pl.id === id)?.name ?? 'Jugador').join(' y ');
+    announcements.push(`¡Empate con ${topCount} votos entre ${tiedNames}! Ante la tensión, el pueblo decidió por azar: ${p?.name ?? 'un jugador'} es enviado a la horca. ¡Era ${role?.name ?? 'desconocido'}!`);
   }
 
   return { eliminations, announcements, nextPhase: 'night_start' };

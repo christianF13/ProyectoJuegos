@@ -327,7 +327,9 @@ function setupGlobalEventBroadcasting(io: SocketIOServer): void {
   eventBus.on(GameEventType.PHASE_ENDED, (event) => {
     const result = event.data.result as any;
     if (result?.announcements?.length > 0) {
+      const fullText = result.announcements.join(' ');
       io.to(`game:${event.gameId}`).emit('game:announcement', { messages: result.announcements });
+      io.to('gm').emit('gm:response', { text: fullText });
     }
   });
 

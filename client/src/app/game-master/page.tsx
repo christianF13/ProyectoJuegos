@@ -126,6 +126,12 @@ export default function GameMasterPage() {
     // Register socket handlers
     const unsubs = [
       on('gm:joined', () => addLog('Conectado como Game Master')),
+      on('gm:game_created', ({ gameId: gId, code }: { gameId: string; code: string }) => {
+        setGameId(gId);
+        setGameCode(code);
+        gameIdRef.current = gId;
+        addLog(`✅ Partida creada: ${code}`);
+      }),
       on('gm:response', async ({ text }: { text: string }) => {
         setGmText(text);
         await speak(text);
@@ -202,21 +208,30 @@ export default function GameMasterPage() {
   };
 
   const createGame = async (defId: string) => {
+    addLog('Iniciando sala...');
+    // 1. Emitir por WebSocket (inmune a CORS y bloqueos de túneles)
+    emit('gm:create_game', { gameDefinitionId: defId });
+
+    // 2. Intentar también por HTTP fetch con bypass header
     try {
       const res = await fetch(`${SERVER}/api/games`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'bypass-tunnel-reminder': 'true',
+        },
         body: JSON.stringify({ gameDefinitionId: defId }),
       });
-      const data = await res.json();
-      setGameId(data.gameId);
-      setGameCode(data.code);
-      gameIdRef.current = data.gameId;
-      emit('gm:join', { gameId: data.gameId });
-      addLog(`✅ Partida creada: ${data.code}`);
-      emit('gm:chat', { message: `Se creó una partida de ${availableGames.find(g => g.id === defId)?.name}. El código es ${data.code}. Anuncia esto a los jugadores de manera dramática.`, gameId: data.gameId });
+      if (res.ok) {
+        const data = await res.json();
+        setGameId(data.gameId);
+        setGameCode(data.code);
+        gameIdRef.current = data.gameId;
+        emit('gm:join', { gameId: data.gameId });
+        addLog(`✅ Partida creada: ${data.code}`);
+      }
     } catch (e) {
-      addLog('❌ Error creando partida');
+      // Ignorar, el WebSocket lo maneja
     }
   };
 

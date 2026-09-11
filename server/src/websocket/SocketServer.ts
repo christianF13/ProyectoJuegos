@@ -70,6 +70,22 @@ export function initializeSocketServer(httpServer: HTTPServer): SocketIOServer {
       }
     });
 
+    // ── GM creates game via WebSocket (Bypasses HTTP/CORS/Tunnels) ───
+    socket.on('gm:create_game', async ({ gameDefinitionId }: { gameDefinitionId: string }) => {
+      try {
+        const state = await gameManager.createGame(gameDefinitionId);
+        socket.join(`game:${state.id}`);
+        socket.emit('gm:game_created', {
+          gameId: state.id,
+          code: state.code,
+        });
+        socket.emit('game:updated', PrivacyGuard.getPublicState(state));
+        console.log(`🎮 Partida creada por GM: ${state.code}`);
+      } catch (err: any) {
+        socket.emit('error', { message: err.message });
+      }
+    });
+
     // ── GM sends voice/text message ─────────────────────────────────
     socket.on('gm:chat', async ({ message, gameId }: { message: string; gameId?: string }) => {
       try {

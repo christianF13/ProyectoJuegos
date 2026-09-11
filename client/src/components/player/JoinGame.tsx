@@ -5,12 +5,20 @@ interface JoinGameProps {
   onJoin: (code: string, name: string) => void;
   isLoading?: boolean;
   error?: string;
+  initialCode?: string;
 }
 
-export default function JoinGame({ onJoin, isLoading, error }: JoinGameProps) {
-  const [step, setStep] = useState<'code' | 'name'>('code');
-  const [code, setCode] = useState('');
+export default function JoinGame({ onJoin, isLoading, error, initialCode = '' }: JoinGameProps) {
+  const [step, setStep] = useState<'code' | 'name'>(initialCode ? 'name' : 'code');
+  const [code, setCode] = useState(initialCode);
   const [name, setName] = useState('');
+
+  React.useEffect(() => {
+    if (initialCode) {
+      setCode(initialCode.toUpperCase());
+      setStep('name');
+    }
+  }, [initialCode]);
 
   const handleCodeSubmit = () => {
     if (code.trim().length >= 4) setStep('name');

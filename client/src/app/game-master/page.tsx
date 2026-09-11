@@ -82,6 +82,7 @@ export default function GameMasterPage() {
   const [gameCode, setGameCode] = useState<string | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [winnerDesc, setWinnerDesc] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [playerReveal, setPlayerReveal] = useState<Array<{
     id: string;
     name: string;
@@ -390,17 +391,32 @@ export default function GameMasterPage() {
               <div className="bg-white p-3 rounded-xl shadow-[0_0_30px_rgba(255,255,255,0.1)]">
                 {originUrl && (
                   <QRCode
-                    value={`${originUrl}/player`}
+                    value={gameCode ? `${originUrl}/player?code=${gameCode}` : `${originUrl}/player`}
                     size={160}
                     level="H"
                   />
                 )}
               </div>
               <p className="text-gray-400 text-center max-w-sm text-sm">
-                Escanea el código QR para entrar a la sala, o diles que entren a la web e ingresen el código:
+                Escanea el código QR o comparte el enlace directo para entrar:
               </p>
-              <div className="bg-night-card border border-night-border rounded-xl px-6 py-2">
-                <p className="text-2xl font-black text-white tracking-[0.2em]">{gameCode}</p>
+              <div className="flex flex-col sm:flex-row items-center gap-2">
+                <div className="bg-night-card border border-night-border rounded-xl px-6 py-2">
+                  <p className="text-2xl font-black text-white tracking-[0.2em]">{gameCode}</p>
+                </div>
+                {originUrl && gameCode && (
+                  <button
+                    onClick={() => {
+                      const link = `${originUrl}/player?code=${gameCode}`;
+                      navigator.clipboard.writeText(link);
+                      setCopiedLink(true);
+                      setTimeout(() => setCopiedLink(false), 2500);
+                    }}
+                    className="px-4 py-2.5 bg-village-gold/15 border border-village-gold/40 hover:bg-village-gold hover:text-black text-village-gold text-xs font-bold rounded-xl transition-all flex items-center gap-2 shadow cursor-pointer"
+                  >
+                    {copiedLink ? '✅ ¡Enlace Copiado!' : '📋 Copiar Enlace Directo'}
+                  </button>
+                )}
               </div>
 
               <div className="flex flex-col items-center gap-2 mt-2">

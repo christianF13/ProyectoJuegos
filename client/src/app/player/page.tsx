@@ -65,6 +65,15 @@ export default function PlayerPage() {
   const [voteConfirmed, setVoteConfirmed] = useState(false);
   const [seerResult, setSeerResult] = useState<{ targetName: string; isWerewolf: boolean; message?: string } | null>(null);
   const [seerVisions, setSeerVisions] = useState<Array<{ targetId?: string; targetName: string; isWerewolf: boolean }>>([]);
+  const [initialCode, setInitialCode] = useState<string>('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const c = params.get('code');
+      if (c) setInitialCode(c.toUpperCase());
+    }
+  }, []);
 
   // Keep player ref for closures
   const myPlayerRef = useRef<MyPlayer | null>(null);
@@ -310,11 +319,12 @@ export default function PlayerPage() {
       case 'joining':
         return (
           <JoinGame
-          onJoin={handleJoin}
-          isLoading={isJoining}
-          error={joinError}
-        />
-      );
+            onJoin={handleJoin}
+            isLoading={isJoining}
+            error={joinError}
+            initialCode={initialCode}
+          />
+        );
 
     case 'waiting_start':
       return (

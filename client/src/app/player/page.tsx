@@ -375,11 +375,27 @@ export default function PlayerPage() {
       );
 
     case 'game_ended': {
-      const ROLE_ICONS: Record<string,string> = {
-        werewolf:'🐺', villager:'🧑‍🌾', seer:'🔮', witch:'🧙‍♀️', healer:'💊', caperucita:'🧺'
+      const ROLE_IMAGES: Record<string, string> = {
+        werewolf: '/roles/werewolf.jpg',
+        villager: '/roles/villager.jpg',
+        seer: '/roles/seer.jpg',
+        witch: '/roles/witch.jpg',
+        healer: '/roles/healer.jpg',
+        caperucita: '/roles/caperucita.jpg',
+        hunter: '/roles/hunter.jpg',
+        cupid: '/roles/cupid.jpg',
+        mayor: '/roles/mayor.jpg',
       };
-      const ROLE_NAMES: Record<string,string> = {
-        werewolf:'Hombre Lobo', villager:'Aldeano', seer:'Vidente', witch:'Bruja', healer:'Curandero', caperucita:'Caperucita Roja'
+      const ROLE_NAMES: Record<string, string> = {
+        werewolf: 'Hombre Lobo',
+        villager: 'Aldeano',
+        seer: 'Vidente',
+        witch: 'Bruja',
+        healer: 'Curandero',
+        caperucita: 'Caperucita Roja',
+        hunter: 'Cazador',
+        cupid: 'Cupido',
+        mayor: 'Alcalde',
       };
       return (
         <div className="min-h-screen bg-night flex flex-col items-center px-4 py-8 overflow-y-auto">
@@ -396,21 +412,27 @@ export default function PlayerPage() {
                 {playerReveal.map(p => (
                   <div
                     key={p.id}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border ${
                       p.faction === 'wolves'
                         ? 'bg-red-950/40 border-red-900/60'
                         : 'bg-night-card border-night-border'
-                    } ${!p.isAlive ? 'opacity-50' : ''}`}
+                    } ${!p.isAlive ? 'opacity-60' : ''}`}
                   >
-                    <span className="text-2xl">{ROLE_ICONS[p.roleId] ?? '❓'}</span>
-                    <div className="flex-1 text-left">
-                      <p className="text-sm font-bold text-white">{p.name}</p>
-                      <p className={`text-xs ${p.faction === 'wolves' ? 'text-red-400' : 'text-gray-400'}`}>
+                    <div className="w-10 h-14 rounded-lg overflow-hidden border border-night-border flex-shrink-0 bg-night shadow">
+                      <img
+                        src={ROLE_IMAGES[p.roleId] ?? '/roles/villager.jpg'}
+                        alt={p.roleId}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 text-left min-w-0">
+                      <p className="text-sm font-bold text-white truncate">{p.name}</p>
+                      <p className={`text-xs ${p.faction === 'wolves' ? 'text-red-400 font-semibold' : 'text-gray-400'}`}>
                         {ROLE_NAMES[p.roleId] ?? p.roleId}
                       </p>
                     </div>
-                    <span className={`text-xs font-bold ${p.isAlive ? 'text-green-400' : 'text-gray-600'}`}>
-                      {p.isAlive ? '✅ Vivo' : '💀 Eliminado'}
+                    <span className={`text-xs font-bold shrink-0 ${p.isAlive ? 'text-green-400' : 'text-gray-500'}`}>
+                      {p.isAlive ? '✅ Vivo' : '💀 Muerto'}
                     </span>
                   </div>
                 ))}
@@ -420,7 +442,7 @@ export default function PlayerPage() {
 
           <button
             onClick={() => window.location.reload()}
-            className="px-8 py-4 bg-village-gold text-black font-black text-lg rounded-2xl hover:bg-yellow-400 transition-all"
+            className="px-8 py-4 bg-village-gold text-black font-black text-lg rounded-2xl hover:bg-yellow-400 transition-all shadow-lg shadow-village-gold/20"
           >
             🎮 Jugar de Nuevo
           </button>

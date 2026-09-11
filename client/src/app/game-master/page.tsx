@@ -45,6 +45,30 @@ interface GameDef {
 
 const SERVER = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001';
 
+const ROLE_IMAGES: Record<string, string> = {
+  werewolf: '/roles/werewolf.jpg',
+  villager: '/roles/villager.jpg',
+  seer: '/roles/seer.jpg',
+  witch: '/roles/witch.jpg',
+  healer: '/roles/healer.jpg',
+  caperucita: '/roles/caperucita.jpg',
+  hunter: '/roles/hunter.jpg',
+  cupid: '/roles/cupid.jpg',
+  mayor: '/roles/mayor.jpg',
+};
+
+const ROLE_NAMES: Record<string, string> = {
+  werewolf: 'Hombre Lobo',
+  villager: 'Aldeano',
+  seer: 'Vidente',
+  witch: 'Bruja',
+  healer: 'Curandero',
+  caperucita: 'Caperucita Roja',
+  hunter: 'Cazador',
+  cupid: 'Cupido',
+  mayor: 'Alcalde',
+};
+
 export default function GameMasterPage() {
   const { emit, on } = useSocket();
   const { speak, startListening, stopListening, isListening, isSpeaking, transcript } = useVoice();
@@ -57,6 +81,14 @@ export default function GameMasterPage() {
   const [gameId, setGameId] = useState<string | null>(null);
   const [gameCode, setGameCode] = useState<string | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
+  const [winnerDesc, setWinnerDesc] = useState<string | null>(null);
+  const [playerReveal, setPlayerReveal] = useState<Array<{
+    id: string;
+    name: string;
+    roleId: string;
+    faction: string;
+    isAlive: boolean;
+  }>>([]);
   const gameIdRef = useRef<string | null>(null);
 
   const addLog = (msg: string) => setLogs(prev => [...prev.slice(-8), msg]);
@@ -137,8 +169,10 @@ export default function GameMasterPage() {
           soundEngine.playDeathGong();
         }
       }),
-      on('game:ended', ({ winnerFaction }: { winnerFaction: string }) => {
-        addLog(`🏆 Ganador: ${winnerFaction === 'wolves' ? 'Hombres Lobo' : 'Aldeanos'}`);
+      on('game:ended', (data: { winnerFaction: string; description: string; playerReveal?: any[] }) => {
+        addLog(`🏆 ${data.description}`);
+        if (data.description) setWinnerDesc(data.description);
+        if (data.playerReveal) setPlayerReveal(data.playerReveal);
         if (audioModeRef.current === 'room') {
           soundEngine.playVictoryFanfare();
         }
@@ -238,26 +272,89 @@ export default function GameMasterPage() {
           </div>
         </aside>
 
-        {/* MAIN CENTER — Phase + Timer */}
+        {/* MAIN CENTER — Phase + Timer OR Grand Finale Reveal */}
         <main className="flex-1 flex flex-col items-center justify-center gap-4 px-8 py-6 overflow-y-auto">
-          {/* Phase display */}
-          <PhaseDisplay
-            phase={currentPhase}
-            round={gameState?.round ?? 0}
-            announcement={announcement}
-          />
+          {gameState?.status === 'finished' ? (
+            <div className="flex flex-col items-center max-w-4xl w-full py-4 text-center animate-fade-in">
+              <div className="text-7xl mb-2 animate-bounce">🏆</div>
+              <h2 className="text-4xl font-black text-village-gold tracking-wider mb-2">¡FIN DE LA PARTIDA!</h2>
+              <p className="text-xl font-bold text-white mb-6 max-w-xl leading-relaxed">
+                {winnerDesc || gameState.winner || '¡La partida ha concluido!'}
+              </p>
 
-          {/* Timer */}
-          {timer && isActive && (
-            <Timer remaining={timer.remaining} total={timer.total} phase={timer.phase} />
-          )}
+              {/* Reveal cards grid */}
+              {playerReveal.length > 0 ? (
+                <div className="w-full mb-8">
+                  <p className="text-xs text-gray-400 font-bold tracking-widest uppercase mb-4">
+                    REVELACIÓN DE ROLES SECRETOS
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {playerReveal.map(p => {
+                      const isWolf = p.faction === 'wolves';
+                      const cardImg = ROLE_IMAGES[p.roleId] ?? '/roles/villager.jpg';
+                      const roleTitle = ROLE_NAMES[p.roleId] ?? p.roleId;
+                      return (
+                        <div
+                          key={p.id}
+                          className={`flex flex-col items-center p-3 rounded-2xl border transition-all duration-300 ${
+                            isWolf
+                              ? 'bg-red-950/40 border-red-700/60 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
+                              : 'bg-night-card border-night-border'
+                          } ${!p.isAlive ? 'opacity-50 grayscale' : ''}`}
+                        >
+                          <div className="w-20 h-28 rounded-xl overflow-hidden border border-night-border mb-2 shadow-md relative bg-night">
+                            <img
+                              src={cardImg}
+                              alt={roleTitle}
+                              className="w-full h-full object-cover"
+                            />
+                            {!p.isAlive && (
+                              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                <span className="text-3xl">💀</span>
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-sm font-bold text-white truncate max-w-[120px]">{p.name}</p>
+                          <p className={`text-xs font-semibold ${isWolf ? 'text-red-400' : 'text-village-gold'}`}>
+                            {roleTitle}
+                          </p>
+                          <span className={`text-[10px] font-bold mt-1 px-2 py-0.5 rounded-full ${
+                            p.isAlive ? 'bg-green-950/80 text-green-400 border border-green-700/50' : 'bg-gray-800 text-gray-400'
+                          }`}>
+                            {p.isAlive ? 'VIVO' : 'ELIMINADO'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full mb-6">
+                  <p className="text-sm text-gray-500">Cargando roles de los jugadores...</p>
+                </div>
+              )}
 
-          {/* Game ended banner */}
-          {gameState?.status === 'finished' && (
-            <div className="bg-village-gold/10 border border-village-gold/50 rounded-2xl px-10 py-6 text-center">
-              <p className="text-5xl mb-3">🏆</p>
-              <p className="text-2xl font-bold text-village-gold">{gameState.winner}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-8 py-4 bg-village-gold text-black font-black text-lg rounded-2xl hover:bg-yellow-400 transition-all shadow-lg shadow-village-gold/30 flex items-center gap-2 cursor-pointer"
+              >
+                🎮 Nueva Partida / Volver al Portal
+              </button>
             </div>
+          ) : (
+            <>
+              {/* Phase display */}
+              <PhaseDisplay
+                phase={currentPhase}
+                round={gameState?.round ?? 0}
+                announcement={announcement}
+              />
+
+              {/* Timer */}
+              {timer && isActive && (
+                <Timer remaining={timer.remaining} total={timer.total} phase={timer.phase} />
+              )}
+            </>
           )}
 
           {/* Control buttons */}

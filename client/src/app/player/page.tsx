@@ -67,6 +67,11 @@ export default function PlayerPage() {
   // Keep player ref for closures
   const myPlayerRef = useRef<MyPlayer | null>(null);
   const gameIdRef = useRef<string | null>(null);
+  const screenRef = useRef<PlayerScreen>('joining');
+
+  useEffect(() => {
+    screenRef.current = screen;
+  }, [screen]);
 
   // ── Socket event handlers ──────────────────────────────────────────
   useEffect(() => {
@@ -177,6 +182,14 @@ export default function PlayerPage() {
 
       // Game state update — track phase changes
       on('game:updated', (state: any) => {
+        // If game is finished, ALWAYS show game_ended screen
+        if (state.status === 'finished' || screenRef.current === 'game_ended') {
+          if (state.winner) setWinnerInfo(state.winner);
+          screenRef.current = 'game_ended';
+          setScreen('game_ended');
+          return;
+        }
+
         setCurrentPhase(state.phase);
         // Update alive targets
         const me = myPlayerRef.current;
@@ -186,17 +199,17 @@ export default function PlayerPage() {
             .map((p: any) => ({ id: p.id, name: p.name }));
           setAliveTargets(others);
 
-          // Check if this player was eliminated
+          // Check if this player was eliminated (only while game is active)
           const myEntry = (state.players ?? []).find((p: any) => p.id === me.id);
-          if (myEntry && !myEntry.isAlive) {
+          if (myEntry && !myEntry.isAlive && state.status === 'active') {
             setScreen('eliminated');
           }
         }
-        // IMPORTANT: never reset from role_revealed or night_action — those are driven by separate events
       }),
 
       // Phase changed — update screen accordingly
       on('game:phase_started', ({ phase }: { phase: string }) => {
+        if (screenRef.current === 'game_ended') return;
         setCurrentPhase(phase);
         setActionConfirmed(false);
         setVoteConfirmed(false);
@@ -214,6 +227,7 @@ export default function PlayerPage() {
 
       // Player eliminated event
       on('game:player_eliminated', ({ playerName }: { playerName: string }) => {
+        if (screenRef.current === 'game_ended') return;
         const me = myPlayerRef.current;
         if (me && me.name === playerName) {
           setScreen('eliminated');
@@ -231,6 +245,7 @@ export default function PlayerPage() {
       on('game:ended', (data: { winnerFaction: string; description: string; playerReveal?: any[] }) => {
         setWinnerInfo(data.description);
         if (data.playerReveal) setPlayerReveal(data.playerReveal);
+        screenRef.current = 'game_ended';
         setScreen('game_ended');
       }),
 

@@ -134,7 +134,26 @@ export function initializeSocketServer(httpServer: HTTPServer): SocketIOServer {
         if (!playerId || !gameId) throw new Error('Sesión inválida');
         const state = gameManager.getState(gameId);
         await gameManager.submitAction(gameId, { playerId, actionId, targetId, gameId, phase: state.phase });
-        socket.emit('player:action_confirmed', { actionId });
+
+        const player = state.players.find(p => p.id === playerId);
+        const seerResult = player?.privateInfo?.seerResult as any;
+        const visions = player?.privateInfo?.visions as any;
+
+        if (actionId === 'seer_see' && seerResult) {
+          const message = `${seerResult.targetName} ${seerResult.isWerewolf ? 'ES 🐺 HOMBRE LOBO' : 'NO es lobo ✅ (Es Inocente)'}`;
+          socket.emit('player:private_info', {
+            type: 'seer_result',
+            message,
+            seerResult,
+            visions,
+          });
+        }
+
+        socket.emit('player:action_confirmed', {
+          actionId,
+          seerResult,
+          visions,
+        });
       } catch (err: any) {
         socket.emit('error', { message: err.message });
       }
@@ -355,7 +374,9 @@ function setupGlobalEventBroadcasting(io: SocketIOServer): void {
           const r = seer.privateInfo.seerResult as any;
           io.to(`player:${seer.id}`).emit('player:private_info', {
             type: 'seer_result',
-            message: `${r.targetName} ${r.isWerewolf ? 'ES 🐺 HOMBRE LOBO' : 'NO es lobo ✅'}`,
+            message: `${r.targetName} ${r.isWerewolf ? 'ES 🐺 HOMBRE LOBO' : 'NO es lobo ✅ (Es Inocente)'}`,
+            seerResult: r,
+            visions: seer.privateInfo?.visions,
           });
         }
       } catch (err) {

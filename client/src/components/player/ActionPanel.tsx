@@ -22,14 +22,77 @@ interface ActionPanelProps {
   wolfPreviews?: Record<string, string>; // wolfName -> targetId
   confirmed?: boolean;
   privateInfo?: Record<string, unknown>;
+  seerResult?: { targetName: string; isWerewolf: boolean } | null;
 }
 
-export default function ActionPanel({ actions, targets, onAction, onTargetSelect, wolfPreviews = {}, confirmed, privateInfo }: ActionPanelProps) {
+export default function ActionPanel({ actions, targets, onAction, onTargetSelect, wolfPreviews = {}, confirmed, privateInfo, seerResult }: ActionPanelProps) {
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
+  const isSeer = actions.some(a => a.id === 'seer_see');
+  const targetObj = targets.find(t => t.id === selectedTarget);
+
   if (confirmed || submitted) {
+    if (isSeer) {
+      if (seerResult) {
+        return (
+          <div className="min-h-screen bg-night flex flex-col items-center justify-center px-5 text-center animate-fade-in">
+            <div className="text-6xl mb-3 animate-bounce">🔮</div>
+            <p className="text-xs text-village-gold font-bold tracking-widest uppercase mb-1">Visión Revelada</p>
+            <h2 className="text-2xl font-black text-white mb-5">El rol de {seerResult.targetName}</h2>
+
+            <div className={`w-full max-w-xs p-6 rounded-3xl border-2 flex flex-col items-center mb-6 shadow-2xl transition-all ${
+              seerResult.isWerewolf
+                ? 'bg-red-950/80 border-red-500 shadow-[0_0_35px_rgba(239,68,68,0.5)]'
+                : 'bg-green-950/80 border-green-500 shadow-[0_0_35px_rgba(34,197,94,0.4)]'
+            }`}>
+              <div className="w-24 h-32 rounded-2xl overflow-hidden border-2 mb-4 relative shadow-lg bg-night">
+                <img
+                  src={seerResult.isWerewolf ? '/roles/werewolf.jpg' : '/roles/villager.jpg'}
+                  alt={seerResult.isWerewolf ? 'Hombre Lobo' : 'Aldeano'}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <p className="text-2xl font-black text-white mb-2">{seerResult.targetName}</p>
+              <div className={`px-4 py-1.5 rounded-full font-black text-sm uppercase tracking-wider mb-3 ${
+                seerResult.isWerewolf ? 'bg-red-600 text-white animate-pulse' : 'bg-green-600 text-white'
+              }`}>
+                {seerResult.isWerewolf ? '🐺 ES HOMBRE LOBO' : '🛡️ NO ES LOBO (INOCENTE)'}
+              </div>
+              <p className="text-xs text-gray-300 leading-relaxed text-center">
+                {seerResult.isWerewolf
+                  ? '¡Cuidado! Este jugador forma parte de la manada de los lobos. Convence a la aldea en el día sin descubrirte.'
+                  : 'Este jugador duerme tranquilo esta noche. No es un enemigo de la aldea.'}
+              </p>
+            </div>
+
+            <p className="text-xs text-gray-500 tracking-widest uppercase">Esperando que termine la noche...</p>
+            <div className="mt-4 flex gap-1">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="w-2 h-2 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.2}s` }} />
+              ))}
+            </div>
+          </div>
+        );
+      } else {
+        return (
+          <div className="min-h-screen bg-night flex flex-col items-center justify-center px-5 text-center">
+            <div className="text-6xl mb-4 animate-pulse">🔮</div>
+            <h2 className="text-2xl font-black text-village-gold mb-2">Consultando la Bola de Cristal...</h2>
+            <p className="text-gray-400 text-sm max-w-xs mb-6">
+              Descifrando el aura de {targetObj?.name ?? 'tu objetivo'}...
+            </p>
+            <div className="flex gap-1">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="w-2 h-2 bg-village-gold rounded-full animate-bounce" style={{ animationDelay: `${i * 0.2}s` }} />
+              ))}
+            </div>
+          </div>
+        );
+      }
+    }
+
     return (
       <div className="min-h-screen bg-night flex flex-col items-center justify-center px-5 text-center">
         <div className="text-7xl mb-6">✅</div>

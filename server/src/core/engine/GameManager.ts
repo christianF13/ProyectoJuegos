@@ -208,6 +208,24 @@ class GameManager {
     if (request.actionId === 'witch_kill') {
       player.privateInfo = { ...player.privateInfo, deathPotion: 'used' };
     }
+    if (request.actionId === 'seer_see' && request.targetId) {
+      const target = state.players.find(p => p.id === request.targetId);
+      if (target) {
+        const isWerewolf = target.faction === 'wolves';
+        const newVision = {
+          targetId: target.id,
+          targetName: target.name,
+          isWerewolf,
+          round: state.round,
+        };
+        const existingVisions = ((player.privateInfo?.visions as any[]) || []).filter(v => v.targetId !== target.id);
+        player.privateInfo = {
+          ...player.privateInfo,
+          seerResult: newVision,
+          visions: [...existingVisions, newVision],
+        };
+      }
+    }
     state.updatedAt = new Date();
     await this.persist(state);
 

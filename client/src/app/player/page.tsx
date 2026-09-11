@@ -63,6 +63,8 @@ export default function PlayerPage() {
   const [aliveTargets, setAliveTargets] = useState<Target[]>([]);
   const [actionConfirmed, setActionConfirmed] = useState(false);
   const [voteConfirmed, setVoteConfirmed] = useState(false);
+  const [seerResult, setSeerResult] = useState<{ targetName: string; isWerewolf: boolean; message?: string } | null>(null);
+  const [seerVisions, setSeerVisions] = useState<Array<{ targetId?: string; targetName: string; isWerewolf: boolean }>>([]);
 
   // Keep player ref for closures
   const myPlayerRef = useRef<MyPlayer | null>(null);
@@ -85,6 +87,13 @@ export default function PlayerPage() {
         setCurrentPhase(gameState.phase);
         setIsJoining(false);
         setScreen('waiting_start');
+
+        if (player.privateInfo?.seerResult) {
+          setSeerResult(player.privateInfo.seerResult as any);
+        }
+        if (player.privateInfo?.visions) {
+          setSeerVisions(player.privateInfo.visions as any);
+        }
 
         // Build alive targets (other alive players)
         const others = (gameState.players ?? [])
@@ -115,8 +124,10 @@ export default function PlayerPage() {
       on('player:actions_available', (payload: any) => {
         const { actions: acts, targets: tgts, privateInfo } = payload;
         if (privateInfo) {
-           setMyPlayer(prev => prev ? { ...prev, privateInfo } : null);
-           myPlayerRef.current = myPlayerRef.current ? { ...myPlayerRef.current, privateInfo } : null;
+          setMyPlayer(prev => prev ? { ...prev, privateInfo } : null);
+          myPlayerRef.current = myPlayerRef.current ? { ...myPlayerRef.current, privateInfo } : null;
+          if (privateInfo.seerResult) setSeerResult(privateInfo.seerResult);
+          if (privateInfo.visions) setSeerVisions(privateInfo.visions);
         }
         setActions(acts);
         setTargets(tgts);
@@ -134,8 +145,15 @@ export default function PlayerPage() {
       }),
 
       // Action confirmed by server
-      on('player:action_confirmed', ({ actionId }: { actionId?: string }) => {
+      on('player:action_confirmed', ({ actionId, seerResult: sr, visions: vs }: { actionId?: string; seerResult?: any; visions?: any }) => {
         setActionConfirmed(true);
+        if (sr) {
+          setSeerResult(sr);
+          setPrivateMsg(sr.message || `${sr.targetName} ${sr.isWerewolf ? 'ES 🐺 HOMBRE LOBO' : 'NO es lobo ✅'}`);
+        }
+        if (vs) {
+          setSeerVisions(vs);
+        }
         if (actionId === 'witch_save' && myPlayerRef.current) {
           const updated = {
             ...myPlayerRef.current,
@@ -152,7 +170,17 @@ export default function PlayerPage() {
           setMyPlayer(updated);
           myPlayerRef.current = updated;
         }
-        setScreen('night_waiting');
+
+        // Si es la vidente, le dejamos ver su revelación por 3.5 segundos antes de cambiar a night_waiting
+        if (actionId === 'seer_see') {
+          setTimeout(() => {
+            if (screenRef.current !== 'game_ended') {
+              setScreen('night_waiting');
+            }
+          }, 3500);
+        } else {
+          setScreen('night_waiting');
+        }
       }),
 
       // Vote confirmed by server
@@ -162,13 +190,14 @@ export default function PlayerPage() {
       }),
 
       // Private info (e.g., seer result)
-      on('player:private_info', ({ type, message }: { type: string; message: string }) => {
+      on('player:private_info', ({ type, message, seerResult: sr, visions: vs }: { type: string; message: string; seerResult?: any; visions?: any }) => {
         setPrivateMsg(message);
-        // Update privateInfo in myPlayer if seer result
+        if (sr) setSeerResult(sr);
+        if (vs) setSeerVisions(vs);
         if (type === 'seer_result' && myPlayerRef.current) {
           const updated = {
             ...myPlayerRef.current,
-            privateInfo: { ...myPlayerRef.current.privateInfo, seerResultMessage: message },
+            privateInfo: { ...myPlayerRef.current.privateInfo, seerResultMessage: message, seerResult: sr, visions: vs },
           };
           setMyPlayer(updated);
           myPlayerRef.current = updated;
@@ -320,6 +349,7 @@ export default function PlayerPage() {
           wolfPreviews={wolfPreviews}
           confirmed={actionConfirmed}
           privateInfo={myPlayer?.privateInfo}
+          seerResult={myPlayer?.roleId === 'seer' ? seerResult : null}
         />
       );
 
@@ -328,6 +358,8 @@ export default function PlayerPage() {
         <WaitingScreen
           phase="night"
           playerName={myPlayer?.name}
+          seerResult={myPlayer?.roleId === 'seer' ? seerResult : null}
+          visions={myPlayer?.roleId === 'seer' ? seerVisions : undefined}
         />
       );
 
@@ -337,8 +369,10 @@ export default function PlayerPage() {
           <WaitingScreen
             phase="day_discussion"
             playerName={myPlayer?.name}
+            seerResult={myPlayer?.roleId === 'seer' ? seerResult : null}
+            visions={myPlayer?.roleId === 'seer' ? seerVisions : undefined}
           />
-          {privateMsg && (
+          {privateMsg && myPlayer?.roleId !== 'seer' && (
             <div className="fixed bottom-8 left-4 right-4 bg-seer-purple/20 border border-seer-purple/50 rounded-2xl p-4 text-center">
               <p className="text-xs text-gray-500 tracking-widest mb-1 uppercase">Info Secreta</p>
               <p className="text-white font-bold">{privateMsg}</p>
@@ -353,6 +387,8 @@ export default function PlayerPage() {
           phase="day_vote"
           playerName={myPlayer?.name}
           message="¡Voto registrado! Esperando resultados..."
+          seerResult={myPlayer?.roleId === 'seer' ? seerResult : null}
+          visions={myPlayer?.roleId === 'seer' ? seerVisions : undefined}
         />
       ) : (
         <VotePanel
@@ -362,6 +398,7 @@ export default function PlayerPage() {
           onTargetSelect={targetId => emit('player:target_preview', { targetId })}
           votePreviews={wolfPreviews}
           confirmed={voteConfirmed}
+          seerVisions={myPlayer?.roleId === 'seer' ? seerVisions : undefined}
         />
       );
 
@@ -371,6 +408,8 @@ export default function PlayerPage() {
           phase="day_vote"
           playerName={myPlayer?.name}
           message="¡Voto registrado! Esperando que todos voten..."
+          seerResult={myPlayer?.roleId === 'seer' ? seerResult : null}
+          visions={myPlayer?.roleId === 'seer' ? seerVisions : undefined}
         />
       );
 

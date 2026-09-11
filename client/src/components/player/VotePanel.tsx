@@ -13,9 +13,10 @@ interface VotePanelProps {
   onTargetSelect?: (targetId: string) => void;
   votePreviews?: Record<string, string>; // playerName -> targetId
   confirmed?: boolean;
+  seerVisions?: Array<{ targetId?: string; targetName: string; isWerewolf: boolean }>;
 }
 
-export default function VotePanel({ targets, myPlayerId, onVote, onTargetSelect, votePreviews = {}, confirmed }: VotePanelProps) {
+export default function VotePanel({ targets, myPlayerId, onVote, onTargetSelect, votePreviews = {}, confirmed, seerVisions = [] }: VotePanelProps) {
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
@@ -53,9 +54,25 @@ export default function VotePanel({ targets, myPlayerId, onVote, onTargetSelect,
         Elige al jugador que crees que es el Hombre Lobo. Puedes ver la intención de voto de los demás.
       </p>
 
+      {seerVisions.length > 0 && (
+        <div className="mb-4 p-3 rounded-2xl bg-purple-950/40 border border-purple-500/40 text-center">
+          <p className="text-[10px] text-purple-300 font-bold uppercase tracking-widest mb-1.5">🔮 Tus Visiones Anteriores</p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {seerVisions.map((v, i) => (
+              <span key={i} className={`text-xs px-2.5 py-0.5 rounded-full font-bold border ${
+                v.isWerewolf ? 'bg-red-950/80 border-red-500 text-red-300' : 'bg-green-950/80 border-green-500 text-green-300'
+              }`}>
+                {v.targetName}: {v.isWerewolf ? '🐺 Lobo' : '🛡️ Inocente'}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 space-y-3">
         {targets.map(target => {
           const isSelf = target.id === myPlayerId;
+          const vision = seerVisions.find(v => v.targetId === target.id || v.targetName === target.name);
           const previwingPlayers = Object.entries(votePreviews)
             .filter(([_, tId]) => tId === target.id)
             .map(([pName]) => pName);
@@ -73,7 +90,16 @@ export default function VotePanel({ targets, myPlayerId, onVote, onTargetSelect,
                   : 'border-night-border bg-night-card text-white hover:border-red-500/40 active:scale-95'
               }`}
             >
-              {isSelf ? '👤 ' : selectedTarget === target.id ? '⚔️ ' : ''}{target.name}{isSelf ? ' (Tú)' : ''}
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <span>{isSelf ? '👤 ' : selectedTarget === target.id ? '⚔️ ' : ''}{target.name}{isSelf ? ' (Tú)' : ''}</span>
+                {vision && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold border ${
+                    vision.isWerewolf ? 'bg-red-600/90 text-white border-red-400' : 'bg-green-600/90 text-white border-green-400'
+                  }`}>
+                    {vision.isWerewolf ? '🐺 LOBO' : '🛡️ INOCENTE'}
+                  </span>
+                )}
+              </div>
               {previwingPlayers.length > 0 && (
                 <div className="text-xs text-red-400 mt-2 font-normal">
                   👀 {previwingPlayers.join(', ')} quiere(n) votar aquí

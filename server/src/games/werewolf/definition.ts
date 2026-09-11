@@ -56,7 +56,24 @@ function processPhaseEnd(state: GameState, phase: string): PhaseResult {
     case 'night_start': return { eliminations: [], announcements: [], nextPhase: 'night_werewolves' };
     case 'night_werewolves': return { eliminations: [], announcements: [], nextPhase: 'night_healer' };
     case 'night_healer': return { eliminations: [], announcements: [], nextPhase: 'night_seer' };
-    case 'night_seer': return { eliminations: [], announcements: [], nextPhase: 'night_witch' };
+    case 'night_seer': {
+      const seerSee = state.pendingActions.find(a => a.phase === 'night_seer' && a.actionId === 'seer_see');
+      if (seerSee?.targetId) {
+        const seer = state.players.find(p => p.roleId === 'seer' && p.isAlive);
+        const target = state.players.find(p => p.id === seerSee.targetId);
+        if (seer && target) {
+          const isWerewolf = target.faction === 'wolves';
+          const newVision = { targetId: target.id, targetName: target.name, isWerewolf, round: state.round };
+          const existingVisions = ((seer.privateInfo?.visions as any[]) || []).filter(v => v.targetId !== target.id);
+          seer.privateInfo = {
+            ...seer.privateInfo,
+            seerResult: newVision,
+            visions: [...existingVisions, newVision],
+          };
+        }
+      }
+      return { eliminations: [], announcements: [], nextPhase: 'night_witch' };
+    }
     case 'night_witch': return { eliminations: [], announcements: [], nextPhase: 'night_resolution' };
     case 'night_resolution': return processNightEnd(state);
     case 'day_discussion': return { eliminations: [], announcements: [], nextPhase: 'day_vote' };
